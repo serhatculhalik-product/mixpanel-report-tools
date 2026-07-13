@@ -52,17 +52,35 @@ with `…`.
 
 ---
 
-## Installation (load unpacked)
+## Installation
 
-1. Clone the repository (or download it as a ZIP and unzip):
-   ```bash
-   git clone https://github.com/serhatculhalik-product/mixpanel-report-tools.git
-   ```
-2. Open **`chrome://extensions`** in Chrome.
-3. Turn on **Developer mode** (top-right toggle).
-4. Click **Load unpacked** and select this project folder
-   (the one containing `manifest.json`).
-5. The **Mixpanel Report Tools** icon appears in your toolbar.
+You **don't need to be a developer** to install this. Pick one of the two options
+below — Option A is the easiest.
+
+### Option A — Download from GitHub (recommended)
+
+1. Open the repo page:
+   [github.com/serhatculhalik-product/mixpanel-report-tools](https://github.com/serhatculhalik-product/mixpanel-report-tools)
+2. Click the green **`Code`** button → **`Download ZIP`**.
+3. **Unzip** the downloaded file. You'll get a folder like
+   `mixpanel-report-tools-main`.
+4. In Chrome, go to **`chrome://extensions`** (copy-paste it into the address bar).
+5. Turn on **Developer mode** (toggle in the top-right corner).
+6. Click **`Load unpacked`** and select the unzipped folder (the one that
+   contains the `manifest.json` file).
+7. The **Mixpanel Report Tools** icon appears in your toolbar — click the puzzle
+   piece and pin it for quick access.
+
+> Keep the unzipped folder on your computer. If you delete or move it, Chrome
+> disables the extension.
+
+### Option B — Clone with git (for developers)
+
+```bash
+git clone https://github.com/serhatculhalik-product/mixpanel-report-tools.git
+```
+
+Then follow steps 4–7 above and select the cloned folder.
 
 ## Usage
 
@@ -78,7 +96,9 @@ with `…`.
 
 ---
 
-## How it works
+## How it works (technical — optional)
+
+You can safely skip this section; it's here for the curious and for developers.
 
 - `manifest.json` — MV3 config. Uses `scripting` + `activeTab` and
   `host_permissions: <all_urls>` so it works on any Mixpanel host.
@@ -97,6 +117,32 @@ with `…`.
 - Tables are transposed **in place** by rewriting the existing grid, so the
   native styling is preserved instead of being re-created.
 - Everything runs locally in the page; nothing is sent to any server.
+
+## Roadmap
+
+Planned or under consideration (order may change):
+
+- [ ] Export **all tables on a board** at once into a single spreadsheet
+- [ ] **Reorder / hide columns** before copying
+- [ ] Remember the last-used view (transpose / % change) per report
+- [ ] Optional **CSV** copy in addition to TSV
+- [ ] A small popup to toggle each feature on/off
+
+Have an idea? See **Feedback & contributing** below — no coding required.
+
+## Feedback & contributing
+
+This tool is built for **product managers and analysts**, so you don't need to
+write code to help improve it:
+
+- **Bug or feature request?** Open an issue on the
+  [Issues page](https://github.com/serhatculhalik-product/mixpanel-report-tools/issues):
+  click **New issue**, describe what you expected vs. what happened, and add a
+  screenshot if you can.
+- **Want a new Mixpanel report type supported?** Share a screenshot of the card
+  and the comparison you'd like to see.
+- **Developers:** contributions are welcome — fork the repo, create a branch, and
+  open a pull request.
 
 ## License
 
