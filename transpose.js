@@ -201,7 +201,13 @@
 
   // Restore a table (transposed and/or with a Change column) to its original view.
   function resetTable(table) {
-    if (table.__mpOrigHTML != null) {
+    // Remove our injected "Change" column first — this is non-destructive (only
+    // our added nodes and three grid variables), so it keeps Mixpanel's own
+    // custom elements (checkboxes, selectors) intact.
+    removeChangeColumn(table);
+    // Transpose is destructive (it moves nodes and drops wrappers), so the only
+    // way to undo it is to restore the pre-transpose markup snapshot.
+    if (table.getAttribute("data-mp-transposed") === "1" && table.__mpOrigHTML != null) {
       table.innerHTML = table.__mpOrigHTML;
       if (table.__mpOrigStyle) table.setAttribute("style", table.__mpOrigStyle);
       else table.removeAttribute("style");
@@ -380,7 +386,6 @@
   function renderChangeColumn(table, mode) {
     var sc = findScrollable(table);
     if (!sc) return false;
-    snapshotTable(table);
     removeChangeColumn(table);
 
     var titles = sc.querySelectorAll(":scope > .mp-table-cell.title-cell");
