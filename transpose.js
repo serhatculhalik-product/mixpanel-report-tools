@@ -105,6 +105,34 @@
 
   // ---------- Feature 1: Table transpose ----------
 
+  // Find the ".pre-table-section" (search box row) that sits above this table,
+  // crossing shadow boundaries. Returns null if the table has none.
+  function findPreTableSection(table) {
+    var n = table;
+    for (var hops = 0; n && hops < 8; hops++) {
+      if (n.querySelectorAll) {
+        var pres = n.querySelectorAll(".pre-table-section");
+        if (pres.length) return pres[0];
+      }
+      if (n.parentElement) n = n.parentElement;
+      else if (n.getRootNode && n.getRootNode() && n.getRootNode().host) n = n.getRootNode().host;
+      else n = n.parentNode;
+    }
+    return null;
+  }
+
+  // Dock the control bar at the far right of the pre-table section.
+  function placeInPreSection(bar, pre) {
+    pre.style.display = "flex";
+    pre.style.alignItems = "center";
+    pre.style.flexWrap = "wrap";
+    pre.style.gap = pre.style.gap || "8px";
+    bar.style.position = "static";
+    bar.style.marginLeft = "auto";
+    bar.style.zIndex = "99999";
+    pre.appendChild(bar);
+  }
+
   function addTableControl(table) {
     var doc = table.ownerDocument;
     var host = getCard(table);
@@ -137,7 +165,11 @@
     reset.style.display = vp ? "" : "none";
     bar.appendChild(reset);
 
-    placeControl(bar, host, overflow, table, 10);
+    // Prefer docking to the far right of the pre-table search row when present;
+    // otherwise fall back to the ellipsis menu / above the table.
+    var pre = findPreTableSection(table);
+    if (pre) placeInPreSection(bar, pre);
+    else placeControl(bar, host, overflow, table, 10);
 
     function doTranspose(ev) {
       ev.preventDefault();
