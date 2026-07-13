@@ -279,6 +279,19 @@
     );
   }
 
+  // A colored, bold highlight pill for the raw difference: green when positive,
+  // red when negative, neutral grey when zero.
+  function diffChipHTML(text, sign) {
+    var bg =
+      sign > 0 ? "rgba(34,160,107,.20)" : sign < 0 ? "rgba(229,72,77,.20)" : "rgba(127,127,127,.18)";
+    var fg = sign > 0 ? "#22a06b" : sign < 0 ? "#e5484d" : "inherit";
+    return (
+      '<span data-mp-cmp-extra="1" style="margin-left:6px;padding:1px 6px;border-radius:3px;' +
+      "font-weight:700;font-variant-numeric:tabular-nums;background:" + bg + ";color:" + fg + ';">' +
+      escapeHtml(text) + "</span>"
+    );
+  }
+
   // Wrap legend/segment text to the next line instead of truncating it.
   function relaxWrap(el) {
     if (!el || !el.style) return;
@@ -463,7 +476,7 @@
         chip(el.getAttribute("data-mp-otext")) +
         " compared to " +
         chip(baseText) +
-        ' <span style="opacity:.9;">(' + escapeHtml(extra) + ")</span>";
+        diffChipHTML(extra, val - base);
 
       var mainVal = mt.container.querySelector('[data-sentry-component="renderMainValue"]') || el.parentElement;
       if (mainVal && mainVal.parentNode) mainVal.parentNode.insertBefore(note, mainVal.nextSibling);
@@ -558,13 +571,12 @@
         b === 0 ? (diff === 0 ? 0 : diff > 0 ? 100 : -100) : (diff / Math.abs(b)) * 100;
       el.style.color = colorFor(change, mode);
 
-      // Add the raw difference in parentheses on the "X compared to Y" line.
-      var doc = note.ownerDocument;
-      var span = doc.createElement("span");
-      span.setAttribute("data-mp-cmp-extra", "1");
-      span.style.cssText = "margin-left:6px;font-variant-numeric:tabular-nums;";
-      span.textContent = "(" + (isPct ? fmtPP(diff) : fmtDiff(diff)) + ")";
-      note.appendChild(span);
+      // Add the raw difference as a colored highlight on the compared-to line
+      // (green if positive, red if negative, bold).
+      note.insertAdjacentHTML(
+        "beforeend",
+        diffChipHTML(isPct ? fmtPP(diff) : fmtDiff(diff), diff)
+      );
     }
   }
 

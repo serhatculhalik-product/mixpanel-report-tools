@@ -40,11 +40,12 @@ Cards that show several big numbers get two buttons near the ellipsis menu:
 min/max — so every variant is compared against control. In that case the
 `(+)` / `(-)` buttons only decide which direction is shown as green.
 
-The big value shows the relative `%` change; the note under it spells out
-`X compared to Y (raw difference)`, mimicking Mixpanel's native styling:
+The big value shows the relative `%` change; the note under it reads
+`X compared to Y` followed by the raw difference as a **bold highlight pill**
+(green when positive, red when negative), mimicking Mixpanel's native styling:
 
-- Percentages → `61.79% compared to 61.66% (+0.13pp)` (percentage-point delta)
-- Everything else → `8.11 compared to 7.78 (+0.33)` (net difference)
+- Percentages → `61.79% compared to 61.66%` + `+0.13pp` (percentage-point delta)
+- Everything else → `8.11 compared to 7.78` + `+0.33` (net difference)
 
 Click the active button again to revert.
 
@@ -58,10 +59,11 @@ Some Mixpanel cards already come compared natively — the value is a `%` change
 with an "X compared to Y" note. The extension keeps Mixpanel's `%` value and
 still shows the **`% change(+)` / `% change(-)`** buttons. When you press one it:
 
-- adds the raw difference **in parentheses on the "X compared to Y" line**
-  (the big `%` value is left as-is) — net difference for plain numbers
-  (e.g. `8.11 compared to 7.78 (+0.33)`) or the percentage-point delta for
-  percentages (e.g. `61.79% compared to 61.66% (+0.13pp)`);
+- adds the raw difference as a **bold highlight pill on the "X compared to Y"
+  line** (the big `%` value is left as-is), green when positive and red when
+  negative — net difference for plain numbers (e.g. `8.11 compared to 7.78`
+  + `+0.33`) or the percentage-point delta for percentages (e.g.
+  `61.79% compared to 61.66%` + `+0.13pp`);
 - recolors each value so the direction you care about is green — `(+)` means an
   increase is good, `(-)` means a decrease is good.
 
