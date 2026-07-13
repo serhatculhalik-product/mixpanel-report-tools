@@ -169,6 +169,10 @@ write code to help improve it. All feedback happens in **GitHub Discussions**:
 - **Developers:** contributions are welcome — fork the repo, create a branch, and
   open a pull request.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ## License
 
 [MIT](LICENSE)
