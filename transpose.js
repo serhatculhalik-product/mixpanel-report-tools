@@ -250,6 +250,13 @@
     table.__mpVpVars = null;
   }
 
+  // Spreadsheets (Google Sheets / Excel) treat a cell starting with = + @ as a
+  // formula, so values like "+1.2pp" paste as a broken formula. Prefixing with an
+  // apostrophe forces text; Sheets/Excel hide the apostrophe on paste.
+  function tsvGuard(s) {
+    return s && /^[=+@]/.test(s) ? "'" + s : s;
+  }
+
   function transposeTable(table) {
     try {
       // Already transposed (e.g. by a previous injection): reuse the cached TSV.
@@ -291,7 +298,7 @@
       var lines = [];
       for (var tc = 0; tc < cols; tc++) {
         var row = [];
-        for (var tr = 0; tr < rows; tr++) row.push(textGrid[tr][tc]);
+        for (var tr = 0; tr < rows; tr++) row.push(tsvGuard(textGrid[tr][tc]));
         lines.push(row.join("\t"));
       }
       var tsv = lines.join("\n");
@@ -549,7 +556,7 @@
     for (var a = 0; a < rows; a++) grid.push(new Array(cols).fill(""));
     for (var g = 0; g < cells.length; g++) grid[cells[g].r][cells[g].c] = cellText(cells[g].el);
     var lines = [];
-    for (var rr = 0; rr < rows; rr++) lines.push(grid[rr].join("\t"));
+    for (var rr = 0; rr < rows; rr++) lines.push(grid[rr].map(tsvGuard).join("\t"));
     return lines.join("\n");
   }
 
