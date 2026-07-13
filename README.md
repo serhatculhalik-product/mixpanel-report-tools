@@ -29,7 +29,16 @@ After transposing, the button turns into **`Copy TSV`**. One click copies the
 table as tab-separated values, ready to paste straight into Google Sheets or
 Excel.
 
-### 3. `% change` baseline on metric cards
+### 3. `Change` column on `Value (Past)` tables
+When a table has a **`Value (Past)`** comparison column, it also gets
+**`% change(+)`**, **`% change(-)`** and a standalone **`Copy TSV`** button. The
+`% change` buttons add a new **`Change`** column showing each row's difference
+(current `Value` − `Value (Past)`) as a **bold highlight pill** — `pp` for
+percentages (e.g. `-0.23pp`) or the raw net difference for numbers. The
+`(+)` / `(-)` buttons only decide which direction is green (`(+)` = up is good,
+`(-)` = down is good). **`Copy TSV`** copies the table, including the new column.
+
+### 4. `% change` baseline on metric cards
 Cards that show several big numbers get two buttons near the ellipsis menu:
 
 - **`% change(+)`** — uses the **smallest** value in the card as the baseline
@@ -44,13 +53,13 @@ The big value shows the relative `%` change; the note under it reads
 - Percentages → `61.79% compared to 61.66%` + `+0.13pp` (percentage-point delta)
 - Everything else → `8.11 compared to 7.78` + `+0.33` (net difference)
 
-### 4. Control-group baseline
+### 5. Control-group baseline
 If any metric's label contains the word **`control`** (e.g. an A/B test's control
 segment), it is used as the baseline instead of the min/max — so every variant is
 compared against control. In that case the `(+)` / `(-)` buttons only decide
 which direction is shown as green.
 
-### 5. Already-compared cards
+### 6. Already-compared cards
 Some Mixpanel cards already come compared natively (the value is a `%` change
 with an "X compared to Y" note). The extension keeps Mixpanel's `%` value, and
 when you press **`% change(+)` / `% change(-)`** it:
@@ -62,12 +71,12 @@ when you press **`% change(+)` / `% change(-)`** it:
 - recolors each value so the direction you care about is green — `(+)` means an
   increase is good, `(-)` means a decrease is good.
 
-### 6. Reset to original
+### 7. Reset to original
 A **`↺` reset** icon sits next to the buttons on both tables and metric cards.
 Click it to return the table or card to its **original view**, as if no button
 had been pressed. (Clicking the active `% change` button again also reverts it.)
 
-### 7. Legend text wrapping
+### 8. Legend text wrapping
 Legend/segment text that doesn't fit on one line **wraps** instead of being
 truncated with `…`.
 
@@ -103,6 +112,11 @@ Then, depending on the card:
 - Click **`⇄ Transpose`** to flip the table (rows ↔ columns).
 - The button becomes **`Copy TSV`** — click it to copy the table, then paste
   into Google Sheets / Excel.
+
+**Add a `Change` column to a `Value (Past)` table**
+- Click **`% change(+)`** or **`% change(-)`** to add a **`Change`** column with
+  each row's `Value` − `Value (Past)` (green in your chosen direction).
+- Click **`Copy TSV`** to copy the table with the new column.
 
 **Compare metrics on a card (`% change`)**
 - Click **`% change(+)`** to compare every metric against the **smallest** value

@@ -115,12 +115,28 @@
     var overflow = findOverflowMenu(host);
 
     var bar = doc.createElement("div");
-    bar.style.cssText = "display:inline-flex;gap:6px;align-items:center;";
+    bar.style.cssText = "display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;";
     var btn = mkButton(doc, "\u21C4 Transpose");
-    var reset = mkIconButton(doc, "\u21BA", "Reset to original");
-    reset.style.display = "none";
     bar.appendChild(btn);
+
+    // Tables with a "Value (Past)" column also get a per-row "Change" column.
+    var vp = hasValuePast(table);
+    var bPlus, bMinus, bCopy;
+    if (vp) {
+      bPlus = mkButton(doc, "% change(+)");
+      bMinus = mkButton(doc, "% change(-)");
+      bCopy = mkButton(doc, "Copy TSV");
+      bar.appendChild(bPlus);
+      bar.appendChild(bMinus);
+      bar.appendChild(bCopy);
+    }
+
+    var reset = mkIconButton(doc, "\u21BA", "Reset to original");
+    // A "Value (Past)" table can be changed without transposing, so its reset is
+    // always available; a plain table only needs reset once transposed.
+    reset.style.display = vp ? "" : "none";
     bar.appendChild(reset);
+
     placeControl(bar, host, overflow, table, 10);
 
     function doTranspose(ev) {
@@ -141,25 +157,59 @@
 
     btn.onclick = doTranspose;
 
+    if (vp) {
+      bPlus.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleChangeColumn(table, "min", bPlus, bMinus);
+        return false;
+      };
+      bMinus.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleChangeColumn(table, "max", bPlus, bMinus);
+        return false;
+      };
+      bCopy.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        copyTSV(doc, buildTableTSV(table), bCopy);
+        return false;
+      };
+    }
+
     reset.onclick = function (ev) {
       ev.preventDefault();
       ev.stopPropagation();
       resetTable(table);
       btn.textContent = "\u21C4 Transpose";
       btn.onclick = doTranspose;
-      reset.style.display = "none";
+      if (vp) setActive(bPlus, bMinus, null);
+      reset.style.display = vp ? "" : "none";
       return false;
     };
   }
 
-  // Restore a transposed table to its pre-transpose markup.
+  // Snapshot the pristine markup once so Reset can restore the original view,
+  // whether the change came from transposing or from the "Change" column.
+  function snapshotTable(table) {
+    if (table.__mpOrigHTML == null) {
+      table.__mpOrigHTML = table.innerHTML;
+      table.__mpOrigStyle = table.getAttribute("style") || "";
+    }
+  }
+
+  // Restore a table (transposed and/or with a Change column) to its original view.
   function resetTable(table) {
-    if (table.__mpOrigHTML == null) return;
-    table.innerHTML = table.__mpOrigHTML;
-    if (table.__mpOrigStyle) table.setAttribute("style", table.__mpOrigStyle);
-    else table.removeAttribute("style");
+    if (table.__mpOrigHTML != null) {
+      table.innerHTML = table.__mpOrigHTML;
+      if (table.__mpOrigStyle) table.setAttribute("style", table.__mpOrigStyle);
+      else table.removeAttribute("style");
+    }
     table.removeAttribute("data-mp-transposed");
     table.removeAttribute("data-mp-tsv");
+    table.removeAttribute("data-mp-vp-mode");
+    table.__mpVpVars = null;
   }
 
   function transposeTable(table) {
@@ -170,10 +220,7 @@
       }
 
       // Snapshot the pristine markup once so Reset can restore the original view.
-      if (table.__mpOrigHTML == null) {
-        table.__mpOrigHTML = table.innerHTML;
-        table.__mpOrigStyle = table.getAttribute("style") || "";
-      }
+      snapshotTable(table);
       var cells = [];
       var maxR = 0, maxC = 0;
       function place(el, off) {
@@ -261,6 +308,212 @@
     } else {
       fallback();
     }
+  }
+
+  // ---------- Feature 1b: "Change" column for Value / Value (Past) tables ----------
+
+  function findScrollable(table) {
+    return table.querySelector(":scope > .scrollable-columns");
+  }
+
+  // True when the table has a "Value (Past)" comparison column.
+  function hasValuePast(table) {
+    var sc = findScrollable(table);
+    if (!sc) return false;
+    var titles = sc.querySelectorAll(":scope > .mp-table-cell.title-cell");
+    for (var i = 0; i < titles.length; i++) {
+      if (/\(past\)/i.test((titles[i].textContent || ""))) return true;
+    }
+    return false;
+  }
+
+  // Read the meaningful text of a table cell (header title / value), skipping
+  // menus and checkboxes.
+  function cellText(el) {
+    var h = el.querySelector(".header-title-text");
+    if (h) return (h.innerText || h.textContent || "").replace(/\s+/g, " ").trim();
+    var ow = el.querySelector(".overflow-wrapper");
+    if (ow) return (ow.innerText || ow.textContent || "").replace(/\s+/g, " ").trim();
+    return (el.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  // A highlighted pill for the change cell: green/red by the favorable direction
+  // (min baseline -> increase is good; max baseline -> decrease is good).
+  function changeChipHTML(text, diff, mode) {
+    var fav = diff === 0 || !isFinite(diff) ? 0 : (mode === "max" ? diff < 0 : diff > 0) ? 1 : -1;
+    var bg =
+      fav > 0 ? "rgba(34,160,107,.20)" : fav < 0 ? "rgba(229,72,77,.20)" : "rgba(127,127,127,.18)";
+    var fg = fav > 0 ? "#22a06b" : fav < 0 ? "#e5484d" : "inherit";
+    return (
+      '<span style="padding:1px 6px;border-radius:3px;font-weight:700;' +
+      "font-variant-numeric:tabular-nums;background:" + bg + ";color:" + fg + ';">' +
+      escapeHtml(text) + "</span>"
+    );
+  }
+
+  // Parse a track width (e.g. "repeat(2,175px)" -> 175). Falls back to 175.
+  function trackWidthPx(spec) {
+    var m = ("" + spec).match(/([\d.]+)px/);
+    return m ? parseFloat(m[1]) : 175;
+  }
+
+  function removeChangeColumn(table) {
+    var added = table.querySelectorAll("[data-mp-vp-cell], [data-mp-vp-header]");
+    for (var i = 0; i < added.length; i++) added[i].remove();
+    var v = table.__mpVpVars;
+    if (v) {
+      var sc = findScrollable(table);
+      if (sc) {
+        if (v.dcw) sc.style.setProperty("--data-column-widths", v.dcw);
+        else sc.style.removeProperty("--data-column-widths");
+      }
+      if (v.dtc) table.style.setProperty("--data-table-columns", v.dtc);
+      else table.style.removeProperty("--data-table-columns");
+      if (v.tw) table.style.setProperty("--table-width", v.tw);
+      else table.style.removeProperty("--table-width");
+    }
+    table.removeAttribute("data-mp-vp-mode");
+  }
+
+  // Add a per-row "Change" column = Value - Value (Past), highlighted like the
+  // metric cards (pp for percentages, raw diff for numbers).
+  function renderChangeColumn(table, mode) {
+    var sc = findScrollable(table);
+    if (!sc) return false;
+    snapshotTable(table);
+    removeChangeColumn(table);
+
+    var titles = sc.querySelectorAll(":scope > .mp-table-cell.title-cell");
+    var pastCol = null, pastHeader = null, maxCol = 0;
+    for (var i = 0; i < titles.length; i++) {
+      var cs = parseInt(titles[i].style.gridColumnStart, 10);
+      if (!isFinite(cs)) continue;
+      if (cs > maxCol) maxCol = cs;
+      if (/\(past\)/i.test(titles[i].textContent || "")) { pastCol = cs; pastHeader = titles[i]; }
+    }
+    if (pastCol == null || !pastHeader) return false;
+    var curCol = pastCol - 1; // Mixpanel renders "Value" immediately before "Value (Past)"
+    var newCol = maxCol + 1;
+
+    if (table.__mpVpVars == null) {
+      table.__mpVpVars = {
+        dcw: sc.style.getPropertyValue("--data-column-widths"),
+        dtc: table.style.getPropertyValue("--data-table-columns"),
+        tw: table.style.getPropertyValue("--table-width"),
+      };
+    }
+
+    // Index body cells by row/column.
+    var bodyCells = sc.querySelectorAll(":scope > .mp-table-cell.body-cell");
+    var byRow = {};
+    var samplePast = null;
+    for (var b = 0; b < bodyCells.length; b++) {
+      var rs = parseInt(bodyCells[b].style.gridRowStart, 10);
+      var ccs = parseInt(bodyCells[b].style.gridColumnStart, 10);
+      if (!isFinite(rs) || !isFinite(ccs)) continue;
+      byRow[rs] = byRow[rs] || {};
+      byRow[rs][ccs] = bodyCells[b];
+      if (ccs === pastCol) samplePast = bodyCells[b];
+    }
+    if (!samplePast) return false;
+
+    // Header cell for the new column.
+    var newHeader = pastHeader.cloneNode(true);
+    newHeader.setAttribute("data-mp-vp-header", "1");
+    var hspan = newHeader.querySelector('[elref="headerCellTitle"]') || newHeader.querySelector(".header-title-text");
+    if (hspan) hspan.textContent = "Change";
+    newHeader.style.setProperty("grid-column-start", String(newCol));
+    newHeader.style.setProperty("grid-column-end", String(newCol + 1));
+    sc.appendChild(newHeader);
+
+    // Body cells.
+    for (var rk in byRow) {
+      if (!byRow.hasOwnProperty(rk)) continue;
+      var row = byRow[rk];
+      var curCell = row[curCol];
+      var pastCell = row[pastCol];
+      if (!curCell || !pastCell) continue;
+      var curTxt = cellText(curCell);
+      var pastTxt = cellText(pastCell);
+      var isPct = /%/.test(curTxt) || /%/.test(pastTxt);
+      var diff = parseNum(curTxt) - parseNum(pastTxt);
+      var text = isFinite(diff) ? (isPct ? fmtPP(diff) : fmtDiff(diff)) : "\u2014";
+
+      var cell = pastCell.cloneNode(true);
+      cell.setAttribute("data-mp-vp-cell", "1");
+      cell.style.setProperty("grid-column-start", String(newCol));
+      cell.style.setProperty("grid-column-end", String(newCol + 1));
+      var content = cell.querySelector(".overflow-wrapper") || cell.querySelector(".body-cell-content") || cell;
+      content.removeAttribute("title");
+      content.innerHTML = changeChipHTML(text, diff, mode);
+      sc.appendChild(cell);
+    }
+
+    // Widen the grid so the new column is laid out and visible.
+    var colW = trackWidthPx(table.__mpVpVars.dcw);
+    if (table.__mpVpVars.dcw) {
+      sc.style.setProperty("--data-column-widths", table.__mpVpVars.dcw + " " + colW + "px");
+    }
+    if (table.__mpVpVars.dtc) {
+      var parts = table.__mpVpVars.dtc.trim().split(/\s+/);
+      if (parts.length) {
+        parts[parts.length - 1] = (trackWidthPx(parts[parts.length - 1]) + colW) + "px";
+        table.style.setProperty("--data-table-columns", parts.join(" "));
+      }
+    }
+    if (table.__mpVpVars.tw) {
+      table.style.setProperty("--table-width", (trackWidthPx(table.__mpVpVars.tw) + colW) + "px");
+    }
+
+    table.setAttribute("data-mp-vp-mode", mode);
+    return true;
+  }
+
+  function toggleChangeColumn(table, mode, bPlus, bMinus) {
+    if (table.getAttribute("data-mp-vp-mode") === mode) {
+      removeChangeColumn(table);
+      setActive(bPlus, bMinus, null);
+    } else {
+      if (renderChangeColumn(table, mode)) setActive(bPlus, bMinus, mode);
+    }
+  }
+
+  // Build TSV for a non-transposed table, in normal (row) orientation, including
+  // any injected "Change" column.
+  function buildTableTSV(table) {
+    var cells = [];
+    var maxR = 0, maxC = 0;
+    function place(el, off) {
+      var r = parseInt(el.style.gridRowStart, 10) - 1;
+      var c = parseInt(el.style.gridColumnStart, 10) - 1 + off;
+      if (!isFinite(r) || !isFinite(c) || r < 0 || c < 0) return;
+      cells.push({ r: r, c: c, el: el });
+      if (r > maxR) maxR = r;
+      if (c > maxC) maxC = c;
+    }
+    var fixed = table.querySelector(":scope > .fixed-columns");
+    var fixedCols = 0;
+    if (fixed) {
+      var fcells = fixed.querySelectorAll(":scope > .mp-table-cell");
+      for (var i = 0; i < fcells.length; i++) {
+        var cc = parseInt(fcells[i].style.gridColumnStart, 10);
+        if (isFinite(cc) && cc > fixedCols) fixedCols = cc;
+      }
+      for (var f = 0; f < fcells.length; f++) place(fcells[f], 0);
+    }
+    var sc = findScrollable(table);
+    if (sc) {
+      var scells = sc.querySelectorAll(":scope > .mp-table-cell");
+      for (var s = 0; s < scells.length; s++) place(scells[s], fixedCols);
+    }
+    if (!cells.length) return "";
+    var rows = maxR + 1, cols = maxC + 1;
+    var grid = [];
+    for (var a = 0; a < rows; a++) grid.push(new Array(cols).fill(""));
+    for (var g = 0; g < cells.length; g++) grid[cells[g].r][cells[g].c] = cellText(cells[g].el);
+    var lines = [];
+    for (var rr = 0; rr < rows; rr++) lines.push(grid[rr].join("\t"));
+    return lines.join("\n");
   }
 
   // ---------- Feature 2: % change on metric cards ----------
