@@ -81,6 +81,7 @@
 
   function mkButton(doc, label) {
     var b = doc.createElement("button");
+    b.type = "button"; // avoid implicit form submit inside Mixpanel forms
     b.textContent = label;
     b.style.cssText =
       "padding:3px 8px;font:600 11px -apple-system,Segoe UI,Roboto,sans-serif;" +
@@ -123,7 +124,10 @@
 
   function transposeTable(table) {
     try {
-      if (table.getAttribute("data-mp-transposed") === "1") return "";
+      // Already transposed (e.g. by a previous injection): reuse the cached TSV.
+      if (table.getAttribute("data-mp-transposed") === "1") {
+        return table.getAttribute("data-mp-tsv") || "";
+      }
       var cells = [];
       var maxR = 0, maxC = 0;
       function place(el, off) {
@@ -183,6 +187,7 @@
       table.style.width = "max-content";
       table.style.maxWidth = "100%";
       table.setAttribute("data-mp-transposed", "1");
+      table.setAttribute("data-mp-tsv", tsv);
       return tsv;
     } catch (e) {
       console.error("Mixpanel Transposer transpose error:", e);

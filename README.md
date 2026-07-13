@@ -1,13 +1,13 @@
 # Mixpanel Report Tools
 
-A tiny Chrome extension (Manifest V3) for **Mixpanel** dashboards. With a single
-click it:
+A tiny Chrome extension (Manifest V3) for **Mixpanel** dashboards. Click the
+toolbar icon and it adds small action buttons to each report card so you can:
 
-- **Transposes wide tables** so long horizontal reports become vertical — while
+- **Transpose wide tables** so long horizontal reports become vertical — while
   keeping Mixpanel's native look (fonts, colors, lift pills).
-- **Copies any table as TSV** to the clipboard (paste straight into Google
+- **Copy any table as TSV** to the clipboard (paste straight into Google
   Sheets / Excel).
-- **Adds a `% change` view to multi-metric cards** — compare every metric against
+- **See a `% change` view on multi-metric cards** — compare every metric against
   a single min or max baseline.
 
 No data leaves your browser. The extension only runs when you click its toolbar
