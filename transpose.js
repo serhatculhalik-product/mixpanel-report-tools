@@ -418,6 +418,38 @@
       else table.style.removeProperty("--table-width");
     }
     table.removeAttribute("data-mp-vp-mode");
+    table.removeAttribute("data-mp-vp-sig");
+  }
+
+  // A cheap fingerprint of the table's source Value/Value(Past) rows (ignoring
+  // our injected cells). Used to re-render the Change column only when the
+  // virtualized rows actually change (on scroll), avoiding an update loop.
+  function changeSignature(table) {
+    var sc = findScrollable(table);
+    if (!sc) return "";
+    var cells = sc.querySelectorAll(":scope > .mp-table-cell.body-cell");
+    var parts = [];
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i].getAttribute("data-mp-vp-cell") === "1") continue;
+      parts.push(
+        cells[i].style.gridRowStart + ":" + cells[i].style.gridColumnStart + ":" + cellText(cells[i])
+      );
+    }
+    parts.sort();
+    return parts.join("|");
+  }
+
+  // Re-apply the Change column to any table with an active mode whose visible
+  // rows changed (Mixpanel virtualizes rows, so scrolling swaps them in/out).
+  function syncChangeColumns(roots) {
+    var tables = queryAllRoots(roots, ".mp-data-table[data-mp-vp-mode]");
+    for (var i = 0; i < tables.length; i++) {
+      var tb = tables[i];
+      var sig = changeSignature(tb);
+      if (tb.getAttribute("data-mp-vp-sig") === sig) continue;
+      var mode = tb.getAttribute("data-mp-vp-mode");
+      if (renderChangeColumn(tb, mode)) tb.setAttribute("data-mp-vp-sig", sig);
+    }
   }
 
   // Add a per-row "Change" column = Value - Value (Past), highlighted like the
@@ -518,7 +550,10 @@
       removeChangeColumn(table);
       setActive(bPlus, bMinus, null);
     } else {
-      if (renderChangeColumn(table, mode)) setActive(bPlus, bMinus, mode);
+      if (renderChangeColumn(table, mode)) {
+        table.setAttribute("data-mp-vp-sig", changeSignature(table));
+        setActive(bPlus, bMinus, mode);
+      }
     }
   }
 
@@ -992,6 +1027,9 @@
       relaxLegend(segTexts[st]);
     }
 
+    // Keep active Change columns in sync with virtualized rows that loaded/scrolled.
+    syncChangeColumns(roots);
+
     if (tAdded || mAdded) {
       console.log(
         "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
@@ -1032,6 +1070,24 @@
         } catch (e) {}
       }
     }
+
+    // Mixpanel virtualizes long tables, so scrolling swaps rows in/out without
+    // always firing childList mutations. A capture-phase scroll listener catches
+    // scrolls from any (nested/shadow) container and re-syncs active Change
+    // columns; the signature check keeps this cheap and loop-free.
+    var scrollScheduled = false;
+    document.addEventListener(
+      "scroll",
+      function () {
+        if (scrollScheduled) return;
+        scrollScheduled = true;
+        setTimeout(function () {
+          scrollScheduled = false;
+          syncChangeColumns(collectRoots());
+        }, 120);
+      },
+      true
+    );
 
     watchRoots(scan());
   } else {
