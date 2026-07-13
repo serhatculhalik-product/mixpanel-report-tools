@@ -18,75 +18,109 @@ icon.
 
 ## Features
 
-### 1. Transpose tables
-A small **`⇄ Transpose`** button is added to every data table, next to the
-card's `...` (ellipsis) menu — or just above the table if there's no menu.
-Clicking it flips that specific table (rows ↔ columns) **in place**, so the
-native styling (fonts, colors, lift pills) is preserved.
+The extension adds small, non-destructive buttons to your Mixpanel report cards.
+Nothing is sent anywhere and nothing is changed permanently — every action can be
+undone with **`↺` Reset**, and reloading the page always restores Mixpanel's
+original view.
 
-### 2. Copy as TSV
-After transposing, the button turns into **`Copy TSV`**. One click copies the
-table as tab-separated values, ready to paste straight into Google Sheets or
-Excel.
+### 1. Transpose wide tables
+Long horizontal reports are hard to read and hard to paste into a spreadsheet.
+A **`⇄ Transpose`** button is added to every data table (docked to the right of
+the table's search row when there is one, otherwise next to the card's `...`
+menu, otherwise just above the table). Clicking it flips **that specific table**
+(rows ↔ columns) **in place**, so Mixpanel's native styling — fonts, colors,
+lift pills — is preserved. On boards with several tables, each table gets its own
+button so you only flip the one you want.
 
-### 3. `Change` column on `Value (Past)` tables
-When a table has a **`Value (Past)`** comparison column, it gets
-**`% change(+)`**, **`% change(-)`** and a standalone **`Copy TSV`** button.
+### 2. Copy any table as TSV
+After transposing, the button becomes **`Copy TSV`**. One click copies the table
+as tab-separated values, ready to paste straight into **Google Sheets or Excel**.
 
-Mixpanel only keeps the on‑screen rows loaded (it virtualizes long tables), so
-pressing **`% change`** gathers the **whole list in one pass** and shows a
-complete, static table with a new **`Change`** column — the difference for
-**every** row, not just the visible ones. Each `Change` cell is a **bold
-highlight pill** — `pp` for percentages (e.g. `-0.23pp`) or the raw net
-difference for numbers. The `(+)` / `(-)` buttons only decide which direction is
-green (`(+)` = up is good, `(-)` = down is good).
+- **Full data, not just what's on screen.** `Copy TSV` gathers **every** row of
+  a long table before copying — even the ones you'd normally have to scroll to
+  reach — so you get the complete list.
+- **Spreadsheet-safe.** Cells that start with `=`, `+`, or `@` are automatically
+  escaped so Sheets/Excel don't misread them as broken formulas.
 
-Click the **`Change`** column header to sort by change (first click high → low,
-click again low → high) — instant, since all rows are already collected.
-**`Copy TSV`** follows the current sort order, and **`↺` Reset** restores
-Mixpanel's original table.
+### 3. `Change` column + sorting on `Value (Past)` tables
+When a table has a **`Value (Past)`** comparison column, it gets three extra
+buttons — **`% change(+)`**, **`% change(-)`**, and a standalone **`Copy TSV`** —
+plus the **`↺` Reset** icon.
 
-### 4. `% change` baseline on metric cards
-Cards that show several big numbers get two buttons near the ellipsis menu:
+Pressing **`% change(+)`** or **`% change(-)`** does the heavy lifting in one go:
 
-- **`% change(+)`** — uses the **smallest** value in the card as the baseline
-  and shows every other metric's change relative to it. Increases are green.
-- **`% change(-)`** — uses the **largest** value in the card as the baseline.
-  Decreases are green (useful when *lower is better*).
+- **Collects the whole list at once.** You don't have to scroll — it reads the
+  entire table in one pass and shows a **complete table** with every row.
+- **Adds a `Change` column** = `Value` − `Value (Past)` for each row, shown as a
+  **bold highlight pill**: percentage-point delta for percentages (e.g.
+  `-0.23pp`) or the raw net difference for plain numbers.
+- **Color follows the direction you care about.** `(+)` = up is good (increases
+  green), `(-)` = down is good (decreases green). Switching between `(+)` and
+  `(-)` just recolors — it doesn't re-collect the data.
 
-The big value shows the relative `%` change; the note under it reads
-`X compared to Y` followed by the raw difference as a **bold highlight pill**
-(green when positive, red when negative), mimicking Mixpanel's native styling:
+**Sort by change:** click the **`Change`** column header. Because all rows are
+already collected, sorting is instant — first click sorts **high → low**, click
+again for **low → high**. `Copy TSV` then copies the full table (with the
+`Change` column) in the **current sort order**. `↺` Reset restores Mixpanel's
+original table.
 
-- Percentages → `61.79% compared to 61.66%` + `+0.13pp` (percentage-point delta)
-- Everything else → `8.11 compared to 7.78` + `+0.33` (net difference)
+> The result is a fixed snapshot of the table (so the numbers stay put while you
+> sort and copy). Use **`↺` Reset** whenever you want the live Mixpanel table back.
 
-### 5. Control-group baseline
-If any metric's label contains the word **`control`** (e.g. an A/B test's control
-segment), it is used as the baseline instead of the min/max — so every variant is
-compared against control. In that case the `(+)` / `(-)` buttons only decide
-which direction is shown as green.
+### 4. `% change` baseline on multi-metric cards
+Cards that show several big numbers (KPI tiles, A/B variants, segment
+breakdowns) get two buttons near the ellipsis menu that compare **all** metrics
+in the card against a single baseline:
+
+- **`% change(+)`** — uses the **smallest** value in the card as the baseline;
+  every other metric's change is shown relative to it, with increases in green.
+- **`% change(-)`** — uses the **largest** value as the baseline, with decreases
+  in green (useful when *lower is better*, e.g. cost or drop-off).
+
+Each metric keeps its number and adds a Mixpanel-style comparison underneath: the
+relative `%` change, plus an `X compared to Y` note ending in the raw difference
+as a **bold highlight pill** (green when favorable, red when not, grey at zero):
+
+- Percentages → `61.79% compared to 61.66%` **`+0.13pp`** (percentage-point delta)
+- Everything else → `8.11 compared to 7.78` **`+0.33`** (net difference)
+
+### 5. Control-group baseline (A/B tests)
+If any metric's label contains the word **`control`** (e.g. an experiment's
+control segment), that metric is automatically used as the baseline instead of
+the min/max — so every variant is compared against control. The `(+)` / `(-)`
+buttons then only decide which direction is shown as green.
 
 ### 6. Already-compared cards
-Some Mixpanel cards already come compared natively (the value is a `%` change
-with an "X compared to Y" note). The extension keeps Mixpanel's `%` value, and
-when you press **`% change(+)` / `% change(-)`** it:
+Some Mixpanel cards arrive already compared (the big value is itself a `%` change
+with an "X compared to Y" note). Here the extension **keeps Mixpanel's own `%`**
+and, when you press **`% change(+)` / `% change(-)`**, it:
 
-- adds the raw difference as a **bold highlight pill on the "X compared to Y"
-  line** (the big `%` value is left as-is) — net difference for plain numbers
-  (e.g. `8.11 compared to 7.78` + `+0.33`) or the percentage-point delta for
-  percentages (e.g. `61.79% compared to 61.66%` + `+0.13pp`);
-- recolors each value so the direction you care about is green — `(+)` means an
-  increase is good, `(-)` means a decrease is good.
+- adds the raw difference as a **highlight pill on the "X compared to Y" line**
+  (leaving the headline `%` untouched) — net difference for numbers
+  (`8.11 compared to 7.78` **`+0.33`**) or the percentage-point delta for
+  percentages (`61.79% compared to 61.66%` **`+0.13pp`**);
+- recolors each value for your chosen direction — `(+)` = up is good, `(-)` =
+  down is good.
 
 ### 7. Reset to original
-A **`↺` reset** icon sits next to the buttons on both tables and metric cards.
-Click it to return the table or card to its **original view**, as if no button
-had been pressed. (Clicking the active `% change` button again also reverts it.)
+A **`↺` Reset** icon sits next to the buttons on both tables and metric cards.
+Click it to return that table or card to its **original view**, exactly as if no
+button had been pressed. (Clicking the currently active `% change` button again
+also reverts it.)
 
 ### 8. Legend text wrapping
-Legend/segment text that doesn't fit on one line **wraps** instead of being
-truncated with `…`.
+Legend / segment labels that don't fit on one line **wrap** onto the next line
+instead of being cut off with `…`, so you can read full names.
+
+### 9. Auto-detects late-loading cards
+Once you activate the extension on a page, it keeps watching that page: tables
+and cards that finish loading **after** you clicked get their buttons
+automatically — no need to click the toolbar icon again. It's event-driven (no
+polling), so it stays idle until new content actually appears.
+
+### 10. Private by design
+Everything runs locally in your browser and only after you click the toolbar
+icon. No data is collected, stored, or sent to any server.
 
 ---
 
@@ -111,46 +145,64 @@ You **don't need to be a developer** to install this — just download and load 
 
 ## Usage
 
-1. Open a Mixpanel report/board.
-2. Click the extension icon in the toolbar — buttons appear on each card.
+**Getting started (do this once per page):**
 
-Then, depending on the card:
+1. Open a Mixpanel report or board.
+2. Click the **Mixpanel Report Tools** icon in your Chrome toolbar.
+3. Buttons appear on each card. From now on the extension also adds buttons to
+   any card that finishes loading later — you don't need to click the icon again.
 
-**Transpose & copy a table**
-- Click **`⇄ Transpose`** to flip the table (rows ↔ columns).
-- The button becomes **`Copy TSV`** — click it to copy the table, then paste
-  into Google Sheets / Excel.
+The exact buttons depend on the card. Below is what to do for each type.
 
-**Add a `Change` column to a `Value (Past)` table**
-- Click **`% change(+)`** or **`% change(-)`**. It gathers **all rows** in one
-  pass (Mixpanel only keeps the visible ones loaded) and shows a full, static
-  table with a **`Change`** column = `Value` − `Value (Past)` (green in your
-  chosen direction).
-- Click the **`Change`** column header to sort by change (first click
-  high → low, click again low → high) — instant, no extra scrolling.
-- Click **`Copy TSV`** to copy the full table with the new column, in the
-  current sort order.
-- Click **`↺`** to reset back to Mixpanel's original table.
+### Transpose and copy a table
+1. Find the table's **`⇄ Transpose`** button (to the right of the search row,
+   next to the `...` menu, or just above the table).
+2. Click it to flip rows ↔ columns in place. The button changes to **`Copy TSV`**.
+3. Click **`Copy TSV`** to copy the whole table, then paste into Google Sheets or
+   Excel.
+4. Click **`↺`** to return to the original layout.
 
-**Compare metrics on a card (`% change`)**
-- Click **`% change(+)`** to compare every metric against the **smallest** value
-  (increases shown in green), or **`% change(-)`** to compare against the
-  **largest** value (decreases shown in green).
-- Each metric shows its `%` change plus an `X compared to Y` note with the raw
-  difference as a colored pill (`+0.33` for numbers, `+0.13pp` for percentages).
-- If a metric is labelled **`control`**, it's used as the baseline automatically —
-  the `(+)` / `(-)` buttons then just flip which direction is green.
-- On cards Mixpanel **already compares**, its own `%` stays; pressing a button
-  only adds the raw-difference pill and recolors for your chosen direction.
+> You don't have to transpose to copy — see below for tables that expose a
+> standalone `Copy TSV` button.
 
-**Reset**
-- Click the **`↺`** icon (next to the buttons) to return a table or card to its
-  original view. Clicking the active `% change` button again also reverts it.
+### Add a `Change` column and sort it (`Value (Past)` tables)
+Use this when a table has a **`Value`** and a **`Value (Past)`** column and you
+want the per-row difference.
 
-> Once activated on a page, the extension keeps watching it: tables and cards that
-> finish loading **after** you clicked get their buttons automatically — no matter
-> how long you wait — so you don't need to click the icon again. It's event-driven
-> (no polling), so it stays idle until new content actually appears.
+1. Click **`% change(+)`** (up is good) or **`% change(-)`** (down is good). The
+   extension collects **every** row in one pass and shows a full, static table
+   with a new **`Change`** column (the difference per row, color-coded).
+   - The pressed button briefly shows **`Collecting…`** while it gathers a large
+     table — this is normal.
+2. Switch between **`(+)`** and **`(-)`** any time to flip which direction is
+   green — it just recolors, instantly.
+3. Click the **`Change`** column header to **sort**: first click **high → low**,
+   click again **low → high**.
+4. Click **`Copy TSV`** to copy the complete table (including `Change`) in the
+   current sort order.
+5. Click **`↺`** to restore Mixpanel's original table.
+
+### Compare metrics on a multi-metric card (`% change`)
+Use this on cards that show several big numbers side by side.
+
+1. Click **`% change(+)`** to compare every metric against the **smallest** value
+   (increases green), or **`% change(-)`** to compare against the **largest**
+   value (decreases green).
+2. Read each metric's relative `%` change and the `X compared to Y` note, which
+   ends in the raw difference as a colored pill — `+0.33` for numbers,
+   `+0.13pp` for percentages.
+3. Special cases handled automatically:
+   - **Control group:** if a metric is labelled **`control`**, it becomes the
+     baseline; `(+)` / `(-)` then only flip which direction is green.
+   - **Already-compared cards:** Mixpanel's own headline `%` stays as-is;
+     pressing a button just adds the raw-difference pill on the comparison line
+     and recolors for your chosen direction.
+4. Click **`↺`** (or the active `% change` button again) to revert.
+
+### Reset anything
+Every table and card with buttons also has a **`↺` Reset** icon. Click it to
+return that card to its original view, as if you'd pressed nothing. Reloading the
+page also resets everything.
 
 ---
 
