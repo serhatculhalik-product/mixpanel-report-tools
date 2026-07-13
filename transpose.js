@@ -555,10 +555,35 @@
 
   // ---------- Main flow ----------
 
+  // Collect the document plus every (nested) shadow root in one pass, so a scan
+  // can query them all without repeating the tree walk per selector.
+  function collectRoots() {
+    var roots = [document];
+    var i = 0;
+    while (i < roots.length) {
+      var all = roots[i++].querySelectorAll("*");
+      for (var k = 0; k < all.length; k++) {
+        if (all[k].shadowRoot) roots.push(all[k].shadowRoot);
+      }
+    }
+    return roots;
+  }
+
+  function queryAllRoots(roots, selector) {
+    var out = [];
+    for (var i = 0; i < roots.length; i++) {
+      var found = roots[i].querySelectorAll(selector);
+      for (var j = 0; j < found.length; j++) out.push(found[j]);
+    }
+    return out;
+  }
+
   // Idempotent scan: safe to call many times. Buttons/state are guarded by
   // data-attributes, so only newly loaded tables/cards get processed.
   function scan() {
-    var tables = deepQueryAll(document, ".mp-data-table", []);
+    var roots = collectRoots();
+
+    var tables = queryAllRoots(roots, ".mp-data-table");
     var tAdded = 0;
     for (var t = 0; t < tables.length; t++) {
       var tb = tables[t];
@@ -570,9 +595,9 @@
 
     // Metric cards: treat the whole MultiMetricChart as one group (it may span rows).
     // Fall back to a single _bottom-row_ when there is no MultiMetricChart.
-    var metricRoots = deepQueryAll(document, '[data-sentry-component="MultiMetricChart"]', []);
+    var metricRoots = queryAllRoots(roots, '[data-sentry-component="MultiMetricChart"]');
     if (!metricRoots.length) {
-      metricRoots = deepQueryAll(document, '[class*="_bottom-row_"]', []);
+      metricRoots = queryAllRoots(roots, '[class*="_bottom-row_"]');
     }
     var mAdded = 0;
     for (var r = 0; r < metricRoots.length; r++) {
@@ -580,7 +605,7 @@
     }
 
     // Wrap legend text (drop to the next line instead of truncating)
-    var segTexts = deepQueryAll(document, '[class*="_segment-text_"]', []);
+    var segTexts = queryAllRoots(roots, '[class*="_segment-text_"]');
     for (var st = 0; st < segTexts.length; st++) {
       if (segTexts[st].getAttribute("data-mp-wrapped") === "1") continue;
       segTexts[st].setAttribute("data-mp-wrapped", "1");
@@ -592,36 +617,43 @@
         "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
       );
     }
-    return tAdded + mAdded;
+    return roots;
   }
 
-  scan();
-
-  // Once activated, keep watching so tables/cards that finish loading later get
-  // their buttons automatically (no need to click the extension again).
-  // A DOM observer covers light-DOM changes; a bounded poll also catches data
-  // that populates inside shadow DOM (which the observer cannot see).
+  // Once activated, keep watching (light DOM + every shadow root) so tables and
+  // cards that finish loading later get their buttons automatically, no matter
+  // how long the user waits. Event-driven with a debounce; no periodic polling,
+  // and we only listen for childList changes (node add/remove) to stay quiet
+  // during chart animations, which mostly mutate attributes.
   if (!window.__mpTransposerWatching) {
     window.__mpTransposerWatching = true;
 
+    var observedRoots = new WeakSet();
     var scheduled = false;
-    function schedule() {
+    var observer = new MutationObserver(function () {
       if (scheduled) return;
       scheduled = true;
-      setTimeout(function () { scheduled = false; scan(); }, 300);
+      setTimeout(function () {
+        scheduled = false;
+        watchRoots(scan());
+      }, 300);
+    });
+
+    function watchRoots(roots) {
+      for (var i = 0; i < roots.length; i++) {
+        var r = roots[i];
+        if (observedRoots.has(r)) continue;
+        observedRoots.add(r);
+        try {
+          observer.observe(r === document ? document.documentElement : r, {
+            childList: true,
+            subtree: true,
+          });
+        } catch (e) {}
+      }
     }
 
-    try {
-      var obs = new MutationObserver(schedule);
-      obs.observe(document.documentElement, { childList: true, subtree: true });
-    } catch (e) {}
-
-    var polls = 0;
-    var timer = setInterval(function () {
-      polls++;
-      scan();
-      if (polls >= 60) clearInterval(timer); // ~60s warm-up window
-    }, 1000);
+    watchRoots(scan());
   } else {
     // Re-clicked while already watching: just run an immediate extra scan.
     scan();

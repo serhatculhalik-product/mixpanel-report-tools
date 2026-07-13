@@ -111,10 +111,11 @@ Then follow steps 4–7 above and select the cloned folder.
    - **`% change(+)` / `% change(-)`** → show percentage change against the
      baseline (the `control` group if present, otherwise min/max).
 
-> Once activated on a page, the extension keeps watching it: tables and cards
-> that finish loading **after** you clicked get their buttons automatically, so
-> you don't need to click the icon again (it watches for ~60s and also reacts to
-> later layout changes).
+> Once activated on a page, the extension keeps watching it (light DOM and every
+> shadow root): tables and cards that finish loading **after** you clicked get
+> their buttons automatically — no matter how long you wait — so you don't need
+> to click the icon again. It's event-driven (no polling), so it stays idle until
+> new content actually appears.
 
 ---
 
