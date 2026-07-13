@@ -30,14 +30,21 @@ table as tab-separated values, ready to paste straight into Google Sheets or
 Excel.
 
 ### 3. `Change` column on `Value (Past)` tables
-When a table has a **`Value (Past)`** comparison column, it also gets
-**`% change(+)`**, **`% change(-)`** and a standalone **`Copy TSV`** button. The
-`% change` buttons add a new **`Change`** column showing each row's difference
-(current `Value` − `Value (Past)`) as a **bold highlight pill** — `pp` for
-percentages (e.g. `-0.23pp`) or the raw net difference for numbers. The
-`(+)` / `(-)` buttons only decide which direction is green (`(+)` = up is good,
-`(-)` = down is good). **`Copy TSV`** auto-scrolls the (virtualized) table to
-collect **every row**, then copies it including the new column.
+When a table has a **`Value (Past)`** comparison column, it gets
+**`% change(+)`**, **`% change(-)`** and a standalone **`Copy TSV`** button.
+
+Mixpanel only keeps the on‑screen rows loaded (it virtualizes long tables), so
+pressing **`% change`** gathers the **whole list in one pass** and shows a
+complete, static table with a new **`Change`** column — the difference for
+**every** row, not just the visible ones. Each `Change` cell is a **bold
+highlight pill** — `pp` for percentages (e.g. `-0.23pp`) or the raw net
+difference for numbers. The `(+)` / `(-)` buttons only decide which direction is
+green (`(+)` = up is good, `(-)` = down is good).
+
+Click the **`Change`** column header to sort by change (first click high → low,
+click again low → high) — instant, since all rows are already collected.
+**`Copy TSV`** follows the current sort order, and **`↺` Reset** restores
+Mixpanel's original table.
 
 ### 4. `% change` baseline on metric cards
 Cards that show several big numbers get two buttons near the ellipsis menu:
@@ -115,11 +122,15 @@ Then, depending on the card:
   into Google Sheets / Excel.
 
 **Add a `Change` column to a `Value (Past)` table**
-- Click **`% change(+)`** or **`% change(-)`** to add a **`Change`** column with
-  each row's `Value` − `Value (Past)` (green in your chosen direction).
-- Click **`Copy TSV`** to copy the table with the new column. It briefly
-  auto-scrolls the table to gather **all rows** (Mixpanel only keeps the visible
-  ones loaded), so you get the full list — not just what's on screen.
+- Click **`% change(+)`** or **`% change(-)`**. It gathers **all rows** in one
+  pass (Mixpanel only keeps the visible ones loaded) and shows a full, static
+  table with a **`Change`** column = `Value` − `Value (Past)` (green in your
+  chosen direction).
+- Click the **`Change`** column header to sort by change (first click
+  high → low, click again low → high) — instant, no extra scrolling.
+- Click **`Copy TSV`** to copy the full table with the new column, in the
+  current sort order.
+- Click **`↺`** to reset back to Mixpanel's original table.
 
 **Compare metrics on a card (`% change`)**
 - Click **`% change(+)`** to compare every metric against the **smallest** value

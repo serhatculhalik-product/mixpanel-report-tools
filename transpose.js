@@ -193,13 +193,13 @@
       bPlus.onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
-        toggleChangeColumn(table, "min", bPlus, bMinus);
+        openComputedView(table, "min", bPlus, bMinus);
         return false;
       };
       bMinus.onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
-        toggleChangeColumn(table, "max", bPlus, bMinus);
+        openComputedView(table, "max", bPlus, bMinus);
         return false;
       };
       bCopy.onclick = function (e) {
@@ -231,12 +231,10 @@
     }
   }
 
-  // Restore a table (transposed and/or with a Change column) to its original view.
+  // Restore a table (transposed and/or with a computed view) to its original view.
   function resetTable(table) {
-    // Remove our injected "Change" column first — this is non-destructive (only
-    // our added nodes and three grid variables), so it keeps Mixpanel's own
-    // custom elements (checkboxes, selectors) intact.
-    removeChangeColumn(table);
+    // Tear down any static computed/sorted view and unhide the original table.
+    closeComputedView(table);
     // Transpose is destructive (it moves nodes and drops wrappers), so the only
     // way to undo it is to restore the pre-transpose markup snapshot.
     if (table.getAttribute("data-mp-transposed") === "1" && table.__mpOrigHTML != null) {
@@ -246,8 +244,6 @@
     }
     table.removeAttribute("data-mp-transposed");
     table.removeAttribute("data-mp-tsv");
-    table.removeAttribute("data-mp-vp-mode");
-    table.__mpVpVars = null;
   }
 
   // Spreadsheets (Google Sheets / Excel) treat a cell starting with = + @ as a
@@ -396,167 +392,6 @@
     );
   }
 
-  // Parse a track width (e.g. "repeat(2,175px)" -> 175). Falls back to 175.
-  function trackWidthPx(spec) {
-    var m = ("" + spec).match(/([\d.]+)px/);
-    return m ? parseFloat(m[1]) : 175;
-  }
-
-  function removeChangeColumn(table) {
-    var added = table.querySelectorAll("[data-mp-vp-cell], [data-mp-vp-header]");
-    for (var i = 0; i < added.length; i++) added[i].remove();
-    var v = table.__mpVpVars;
-    if (v) {
-      var sc = findScrollable(table);
-      if (sc) {
-        if (v.dcw) sc.style.setProperty("--data-column-widths", v.dcw);
-        else sc.style.removeProperty("--data-column-widths");
-      }
-      if (v.dtc) table.style.setProperty("--data-table-columns", v.dtc);
-      else table.style.removeProperty("--data-table-columns");
-      if (v.tw) table.style.setProperty("--table-width", v.tw);
-      else table.style.removeProperty("--table-width");
-    }
-    table.removeAttribute("data-mp-vp-mode");
-    table.removeAttribute("data-mp-vp-sig");
-  }
-
-  // A cheap fingerprint of the table's source Value/Value(Past) rows (ignoring
-  // our injected cells). Used to re-render the Change column only when the
-  // virtualized rows actually change (on scroll), avoiding an update loop.
-  function changeSignature(table) {
-    var sc = findScrollable(table);
-    if (!sc) return "";
-    var cells = sc.querySelectorAll(":scope > .mp-table-cell.body-cell");
-    var parts = [];
-    for (var i = 0; i < cells.length; i++) {
-      if (cells[i].getAttribute("data-mp-vp-cell") === "1") continue;
-      parts.push(
-        cells[i].style.gridRowStart + ":" + cells[i].style.gridColumnStart + ":" + cellText(cells[i])
-      );
-    }
-    parts.sort();
-    return parts.join("|");
-  }
-
-  // Re-apply the Change column to any table with an active mode whose visible
-  // rows changed (Mixpanel virtualizes rows, so scrolling swaps them in/out).
-  function syncChangeColumns(roots) {
-    var tables = queryAllRoots(roots, ".mp-data-table[data-mp-vp-mode]");
-    for (var i = 0; i < tables.length; i++) {
-      var tb = tables[i];
-      var sig = changeSignature(tb);
-      if (tb.getAttribute("data-mp-vp-sig") === sig) continue;
-      var mode = tb.getAttribute("data-mp-vp-mode");
-      if (renderChangeColumn(tb, mode)) tb.setAttribute("data-mp-vp-sig", sig);
-    }
-  }
-
-  // Add a per-row "Change" column = Value - Value (Past), highlighted like the
-  // metric cards (pp for percentages, raw diff for numbers).
-  function renderChangeColumn(table, mode) {
-    var sc = findScrollable(table);
-    if (!sc) return false;
-    removeChangeColumn(table);
-
-    var titles = sc.querySelectorAll(":scope > .mp-table-cell.title-cell");
-    var pastCol = null, pastHeader = null, maxCol = 0;
-    for (var i = 0; i < titles.length; i++) {
-      var cs = parseInt(titles[i].style.gridColumnStart, 10);
-      if (!isFinite(cs)) continue;
-      if (cs > maxCol) maxCol = cs;
-      if (/\(past\)/i.test(titles[i].textContent || "")) { pastCol = cs; pastHeader = titles[i]; }
-    }
-    if (pastCol == null || !pastHeader) return false;
-    var curCol = pastCol - 1; // Mixpanel renders "Value" immediately before "Value (Past)"
-    var newCol = maxCol + 1;
-
-    if (table.__mpVpVars == null) {
-      table.__mpVpVars = {
-        dcw: sc.style.getPropertyValue("--data-column-widths"),
-        dtc: table.style.getPropertyValue("--data-table-columns"),
-        tw: table.style.getPropertyValue("--table-width"),
-      };
-    }
-
-    // Index body cells by row/column.
-    var bodyCells = sc.querySelectorAll(":scope > .mp-table-cell.body-cell");
-    var byRow = {};
-    var samplePast = null;
-    for (var b = 0; b < bodyCells.length; b++) {
-      var rs = parseInt(bodyCells[b].style.gridRowStart, 10);
-      var ccs = parseInt(bodyCells[b].style.gridColumnStart, 10);
-      if (!isFinite(rs) || !isFinite(ccs)) continue;
-      byRow[rs] = byRow[rs] || {};
-      byRow[rs][ccs] = bodyCells[b];
-      if (ccs === pastCol) samplePast = bodyCells[b];
-    }
-    if (!samplePast) return false;
-
-    // Header cell for the new column.
-    var newHeader = pastHeader.cloneNode(true);
-    newHeader.setAttribute("data-mp-vp-header", "1");
-    var hspan = newHeader.querySelector('[elref="headerCellTitle"]') || newHeader.querySelector(".header-title-text");
-    if (hspan) hspan.textContent = "Change";
-    newHeader.style.setProperty("grid-column-start", String(newCol));
-    newHeader.style.setProperty("grid-column-end", String(newCol + 1));
-    sc.appendChild(newHeader);
-
-    // Body cells.
-    for (var rk in byRow) {
-      if (!byRow.hasOwnProperty(rk)) continue;
-      var row = byRow[rk];
-      var curCell = row[curCol];
-      var pastCell = row[pastCol];
-      if (!curCell || !pastCell) continue;
-      var curTxt = cellText(curCell);
-      var pastTxt = cellText(pastCell);
-      var isPct = /%/.test(curTxt) || /%/.test(pastTxt);
-      var diff = parseNum(curTxt) - parseNum(pastTxt);
-      var text = isFinite(diff) ? (isPct ? fmtPP(diff) : fmtDiff(diff)) : "\u2014";
-
-      var cell = pastCell.cloneNode(true);
-      cell.setAttribute("data-mp-vp-cell", "1");
-      cell.style.setProperty("grid-column-start", String(newCol));
-      cell.style.setProperty("grid-column-end", String(newCol + 1));
-      var content = cell.querySelector(".overflow-wrapper") || cell.querySelector(".body-cell-content") || cell;
-      content.removeAttribute("title");
-      content.innerHTML = changeChipHTML(text, diff, mode);
-      sc.appendChild(cell);
-    }
-
-    // Widen the grid so the new column is laid out and visible.
-    var colW = trackWidthPx(table.__mpVpVars.dcw);
-    if (table.__mpVpVars.dcw) {
-      sc.style.setProperty("--data-column-widths", table.__mpVpVars.dcw + " " + colW + "px");
-    }
-    if (table.__mpVpVars.dtc) {
-      var parts = table.__mpVpVars.dtc.trim().split(/\s+/);
-      if (parts.length) {
-        parts[parts.length - 1] = (trackWidthPx(parts[parts.length - 1]) + colW) + "px";
-        table.style.setProperty("--data-table-columns", parts.join(" "));
-      }
-    }
-    if (table.__mpVpVars.tw) {
-      table.style.setProperty("--table-width", (trackWidthPx(table.__mpVpVars.tw) + colW) + "px");
-    }
-
-    table.setAttribute("data-mp-vp-mode", mode);
-    return true;
-  }
-
-  function toggleChangeColumn(table, mode, bPlus, bMinus) {
-    if (table.getAttribute("data-mp-vp-mode") === mode) {
-      removeChangeColumn(table);
-      setActive(bPlus, bMinus, null);
-    } else {
-      if (renderChangeColumn(table, mode)) {
-        table.setAttribute("data-mp-vp-sig", changeSignature(table));
-        setActive(bPlus, bMinus, mode);
-      }
-    }
-  }
-
   // ----- Copy TSV for the whole (virtualized) table -----
 
   function sleep(ms) {
@@ -613,79 +448,340 @@
     }
   }
 
-  function tsvFromCache(table, cache) {
-    var rowKeys = Object.keys(cache.rows).map(Number).sort(function (x, y) { return x - y; });
-    var cols = cache.cols;
-    var mode = table.getAttribute("data-mp-vp-mode");
+  // Locate the current/past value columns (combined indices) from the header row.
+  function valuePastCols(cache) {
     var header = cache.rows[1] || {};
     var pastC = null;
-    for (var c = 1; c <= cols; c++) if (/\(past\)/i.test(header[c] || "")) pastC = c;
-    var curC = pastC != null ? pastC - 1 : null;
-    var addChange = mode && pastC != null && curC != null;
+    for (var c = 1; c <= cache.cols; c++) if (/\(past\)/i.test(header[c] || "")) pastC = c;
+    return { pastC: pastC, curC: pastC != null ? pastC - 1 : null };
+  }
+
+  // Change for a data row: {num, text} = current Value - Value (Past).
+  function rowChange(row, curC, pastC) {
+    var curTxt = row[curC], pastTxt = row[pastC];
+    if (curTxt == null || pastTxt == null) return { num: NaN, text: "" };
+    var isPct = /%/.test(curTxt) || /%/.test(pastTxt);
+    var d = parseNum(curTxt) - parseNum(pastTxt);
+    return { num: d, text: isFinite(d) ? (isPct ? fmtPP(d) : fmtDiff(d)) : "" };
+  }
+
+  // Data row keys (>=2) optionally sorted by change; header (1) handled separately.
+  function orderedRowKeys(cache, curC, pastC, sortDir) {
+    var keys = Object.keys(cache.rows).map(Number).filter(function (k) { return k >= 2; });
+    if (!sortDir || curC == null || pastC == null) {
+      return keys.sort(function (x, y) { return x - y; });
+    }
+    keys.sort(function (x, y) {
+      var a = rowChange(cache.rows[x], curC, pastC).num;
+      var b = rowChange(cache.rows[y], curC, pastC).num;
+      var af = isFinite(a), bf = isFinite(b);
+      if (!af && !bf) return x - y;
+      if (!af) return 1;
+      if (!bf) return -1;
+      return sortDir === "asc" ? a - b : b - a;
+    });
+    return keys;
+  }
+
+  function tsvFromCache(table, cache, sortDir) {
+    var cols = cache.cols;
+    var mode = table.getAttribute("data-mp-vp-mode");
+    var vp = valuePastCols(cache);
+    var addChange = mode && vp.pastC != null && vp.curC != null;
+    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir);
 
     var lines = [];
-    for (var i = 0; i < rowKeys.length; i++) {
-      var rk = rowKeys[i];
-      var row = cache.rows[rk];
+    // Header first.
+    if (cache.rows[1]) {
+      var h = [];
+      for (var hc = 1; hc <= cols; hc++) h.push(tsvGuard(cache.rows[1][hc] != null ? cache.rows[1][hc] : ""));
+      if (addChange) h.push("Change");
+      lines.push(h.join("\t"));
+    }
+    for (var i = 0; i < dataKeys.length; i++) {
+      var row = cache.rows[dataKeys[i]];
       var arr = [];
       for (var cc = 1; cc <= cols; cc++) arr.push(tsvGuard(row[cc] != null ? row[cc] : ""));
-      if (addChange) {
-        if (rk === 1) {
-          arr.push("Change");
-        } else {
-          var curTxt = row[curC], pastTxt = row[pastC];
-          if (curTxt != null && pastTxt != null) {
-            var isPct = /%/.test(curTxt) || /%/.test(pastTxt);
-            var d = parseNum(curTxt) - parseNum(pastTxt);
-            arr.push(tsvGuard(isFinite(d) ? (isPct ? fmtPP(d) : fmtDiff(d)) : ""));
-          } else {
-            arr.push("");
-          }
-        }
-      }
+      if (addChange) arr.push(tsvGuard(rowChange(row, vp.curC, vp.pastC).text));
       lines.push(arr.join("\t"));
     }
     return lines.join("\n");
   }
 
-  // Copy the FULL table: auto-scroll through the virtualized rows to render them
-  // all, accumulate into a cache, copy, then restore the scroll position.
-  function collectAndCopyTSV(table, btn, doc) {
-    var scroller = getScrollContainer(table);
-    var cache = { cols: 0, rows: {} };
+  // The last row index Mixpanel lays out for this table. Sticky/segment blocks
+  // span the full grid (grid-row-end covers every row) even while the body is
+  // virtualized, so the largest grid-row-end tells us how many rows exist.
+  function expectedLastRow(table) {
+    var max = 0;
+    var groups = [table.querySelector(":scope > .fixed-columns"), findScrollable(table)];
+    for (var g = 0; g < groups.length; g++) {
+      var el = groups[g];
+      if (!el) continue;
+      var kids = el.children;
+      for (var i = 0; i < kids.length; i++) {
+        var re = parseInt(kids[i].style.gridRowEnd, 10);
+        if (isFinite(re) && re > max) max = re;
+      }
+    }
+    return max > 0 ? max - 1 : 0; // grid-row-end is exclusive
+  }
 
-    if (!scroller) {
+  // The currently-rendered body cell with the highest row index (deepest row).
+  function lastRenderedRow(table) {
+    var best = null, bestR = -1;
+    var groups = [findScrollable(table), table.querySelector(":scope > .fixed-columns")];
+    for (var g = 0; g < groups.length; g++) {
+      var el = groups[g];
+      if (!el) continue;
+      var cells = el.querySelectorAll(":scope > .mp-table-cell.body-cell");
+      for (var i = 0; i < cells.length; i++) {
+        var rs = parseInt(cells[i].style.gridRowStart, 10);
+        if (isFinite(rs) && rs > bestR) { bestR = rs; best = cells[i]; }
+      }
+    }
+    return best;
+  }
+
+  function maxCachedRow(cache) {
+    var mx = 0;
+    for (var k in cache.rows) { var n = +k; if (n > mx) mx = n; }
+    return mx;
+  }
+
+  // Collect EVERY row of a virtualized table. Mixpanel only keeps the on-screen
+  // rows in the DOM, so we drive the virtualizer by scrolling the last rendered
+  // row into view (works regardless of which/where the scroll container is),
+  // accumulating as we go, until we reach the known last row (from the grid) or
+  // no new rows appear. Scroll positions are restored afterwards.
+  function sweepCollect(table) {
+    return new Promise(function (resolve) {
+      var cache = { cols: 0, rows: {} };
       accumulateRows(table, cache);
-      copyTSV(doc, tsvFromCache(table, cache), btn);
+
+      var win = (table.ownerDocument && table.ownerDocument.defaultView) || window;
+      var scroller = getScrollContainer(table);
+      var prevScroll = scroller ? scroller.scrollTop : null;
+      var prevWinY = win.scrollY || 0;
+      var target = expectedLastRow(table);
+
+      (async function () {
+        try {
+          var stale = 0, lastMax = maxCachedRow(cache), guard = 0;
+          while (guard++ < 4000) {
+            if (target > 1 && maxCachedRow(cache) >= target) break;
+
+            var last = lastRenderedRow(table);
+            if (!last) break;
+            try { last.scrollIntoView({ block: "end", inline: "nearest" }); }
+            catch (e) { try { last.scrollIntoView(); } catch (e2) {} }
+            // Also nudge the detected scroller in case scrollIntoView is a no-op
+            // (e.g. the row is already at the container edge).
+            if (scroller) {
+              var step = Math.max(80, Math.floor(scroller.clientHeight * 0.6));
+              scroller.scrollTop = Math.min(scroller.scrollHeight, scroller.scrollTop + step);
+            }
+            await sleep(110);
+            accumulateRows(table, cache);
+
+            var mx = maxCachedRow(cache);
+            if (mx <= lastMax) { if (++stale >= 4) break; }
+            else { stale = 0; lastMax = mx; }
+          }
+        } catch (e) {
+          console.error("Mixpanel Transposer collect error:", e);
+        }
+        if (scroller && prevScroll != null) scroller.scrollTop = prevScroll;
+        try { win.scrollTo(0, prevWinY); } catch (e) {}
+        resolve(cache);
+      })();
+    });
+  }
+
+  // Copy the FULL table (all virtualized rows). Sorted to match the on-screen
+  // sorted view when one is active.
+  function collectAndCopyTSV(table, btn, doc) {
+    // If the computed view is open we already have the full dataset cached, so
+    // copy straight from it (in the current sort order) — no re-sweep needed.
+    if (table.__mpSortCache) {
+      copyTSV(doc, tsvFromCache(table, table.__mpSortCache, table.getAttribute("data-mp-vp-sort")), btn);
+      return;
+    }
+    var label = btn.textContent;
+    btn.textContent = "Copying\u2026";
+    sweepCollect(table).then(function (cache) {
+      btn.textContent = label;
+      copyTSV(doc, tsvFromCache(table, cache, table.getAttribute("data-mp-vp-sort")), btn);
+    });
+  }
+
+  // ----- Computed "Change" view: collect the whole list once, render it all -----
+  //
+  // Mixpanel virtualizes long tables (only the visible rows exist in the DOM), so
+  // computing the Change column on the live grid meant recomputing on every
+  // scroll — fragile, and it interfered with sorting/copying. Instead we sweep
+  // the whole table ONCE when % change is pressed, then render a complete, static
+  // table with the Change column. Sorting and Copy TSV then work off that cached
+  // dataset with no further scrolling. Reset restores Mixpanel's original table.
+
+  // Entry point from the % change(+/-) buttons. `mode` sets the favorable color
+  // direction (min -> up is good, max -> down is good).
+  function openComputedView(table, mode, bPlus, bMinus) {
+    if (table.getAttribute("data-mp-vp-sorting") === "1") return;
+
+    // Clicking the already-active mode toggles the view off.
+    if (table.__mpSortCache && table.getAttribute("data-mp-vp-mode") === mode) {
+      closeComputedView(table);
+      setActive(bPlus, bMinus, null);
+      return;
+    }
+    // View already open: just switch the color direction, keep data + sort.
+    if (table.__mpSortCache) {
+      table.setAttribute("data-mp-vp-mode", mode);
+      renderComputedView(table);
+      setActive(bPlus, bMinus, mode);
       return;
     }
 
-    var label = btn.textContent;
-    btn.textContent = "Copying\u2026";
-    var prev = scroller.scrollTop;
-    var step = Math.max(120, Math.floor(scroller.clientHeight * 0.8));
+    // First open: collect every row in one pass, then render (original order).
+    table.setAttribute("data-mp-vp-sorting", "1");
+    var pending = mkBusy(bPlus, bMinus, mode);
+    sweepCollect(table).then(function (cache) {
+      table.removeAttribute("data-mp-vp-sorting");
+      pending();
+      if (!cache.cols || !cache.rows[1]) return;
+      table.__mpSortCache = cache;
+      table.setAttribute("data-mp-vp-mode", mode);
+      table.removeAttribute("data-mp-vp-sort"); // original order until the header is clicked
+      renderComputedView(table);
+      setActive(bPlus, bMinus, mode);
+    });
+  }
 
-    (async function () {
-      try {
-        scroller.scrollTop = 0;
-        await sleep(90);
-        accumulateRows(table, cache);
-        var guard = 0;
-        while (scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 && guard++ < 1000) {
-          scroller.scrollTop = Math.min(scroller.scrollHeight, scroller.scrollTop + step);
-          await sleep(90);
-          accumulateRows(table, cache);
-        }
-        // Bottom row sometimes settles after the last jump.
-        await sleep(90);
-        accumulateRows(table, cache);
-      } catch (e) {
-        console.error("Mixpanel Transposer collect error:", e);
+  // Show a brief busy label on the pressed button while the sweep runs.
+  function mkBusy(bPlus, bMinus, mode) {
+    var btn = mode === "max" ? bMinus : bPlus;
+    if (!btn) return function () {};
+    var prev = btn.textContent;
+    btn.textContent = "Collecting\u2026";
+    return function () { btn.textContent = prev; };
+  }
+
+  // Clicking the Change header sorts the cached dataset: first high->low, then
+  // low->high. No re-sweep — everything is already collected.
+  function toggleSort(table) {
+    if (!table.__mpSortCache) return;
+    var cur = table.getAttribute("data-mp-vp-sort");
+    table.setAttribute("data-mp-vp-sort", cur === "desc" ? "asc" : "desc");
+    renderComputedView(table);
+  }
+
+  // (Re)build the static table from the cache using the current mode + sort, and
+  // swap it in for Mixpanel's live table (hidden, restored on reset).
+  function renderComputedView(table) {
+    var cache = table.__mpSortCache;
+    if (!cache) return;
+    var node = buildComputedTable(
+      table,
+      cache,
+      table.getAttribute("data-mp-vp-mode") || "min",
+      table.getAttribute("data-mp-vp-sort") || null
+    );
+    if (!node) return;
+    if (table.__mpSortedView && table.__mpSortedView.parentNode) table.__mpSortedView.remove();
+    var container =
+      (table.closest && table.closest(".mp-data-table-container")) || table.parentElement || table;
+    if (!table.__mpHidden) {
+      table.__mpHidden = container;
+      container.style.display = "none";
+    }
+    container.parentNode.insertBefore(node, container.nextSibling);
+    table.__mpSortedView = node;
+  }
+
+  function closeComputedView(table) {
+    if (table.__mpSortedView && table.__mpSortedView.parentNode) table.__mpSortedView.remove();
+    table.__mpSortedView = null;
+    table.__mpSortCache = null;
+    if (table.__mpHidden) {
+      table.__mpHidden.style.display = "";
+      table.__mpHidden = null;
+    }
+    table.removeAttribute("data-mp-vp-mode");
+    table.removeAttribute("data-mp-vp-sort");
+    table.removeAttribute("data-mp-vp-sorting");
+  }
+
+  // A clean, dark, static table built from the collected cache. `sortDir` null =
+  // original row order; "desc"/"asc" = sorted by change.
+  function buildComputedTable(table, cache, mode, sortDir) {
+    var doc = table.ownerDocument;
+    var cols = cache.cols;
+    if (!cols || !cache.rows[1]) return null;
+    var vp = valuePastCols(cache);
+    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir);
+
+    var wrap = doc.createElement("div");
+    wrap.setAttribute("data-mp-computed-view", "1");
+    wrap.style.cssText =
+      "max-height:520px;overflow:auto;border:1px solid rgba(127,127,127,.25);" +
+      "border-radius:8px;margin:8px 0;font:500 13px -apple-system,Segoe UI,Roboto,sans-serif;";
+
+    var tbl = doc.createElement("table");
+    tbl.style.cssText = "border-collapse:collapse;width:100%;color:inherit;";
+
+    var arrow = sortDir === "asc" ? " \u2191" : sortDir === "desc" ? " \u2193" : " \u2195";
+    var thead = doc.createElement("thead");
+    var htr = doc.createElement("tr");
+    function th(label, clickable, alignRight) {
+      var c = doc.createElement("th");
+      c.textContent = label;
+      c.style.cssText =
+        "position:sticky;top:0;background:#20232a;color:#e8eaed;text-align:" +
+        (alignRight ? "right" : "left") + ";padding:8px 12px;white-space:nowrap;" +
+        "border-bottom:1px solid rgba(127,127,127,.3);font-weight:600;" +
+        (clickable ? "cursor:pointer;user-select:none;" : "");
+      return c;
+    }
+    for (var c = 1; c <= cols; c++) {
+      var isNumCol = c === vp.curC || c === vp.pastC;
+      htr.appendChild(th(cache.rows[1][c] != null ? cache.rows[1][c] : "", false, isNumCol));
+    }
+    var changeTh = th("Change" + arrow, true, true);
+    changeTh.title = "Sort by change (click to flip direction)";
+    changeTh.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSort(table);
+      return false;
+    };
+    htr.appendChild(changeTh);
+    thead.appendChild(htr);
+    tbl.appendChild(thead);
+
+    var tbody = doc.createElement("tbody");
+    for (var i = 0; i < dataKeys.length; i++) {
+      var row = cache.rows[dataKeys[i]];
+      var tr = doc.createElement("tr");
+      tr.style.cssText = "border-bottom:1px solid rgba(127,127,127,.12);";
+      for (var cc = 1; cc <= cols; cc++) {
+        var td = doc.createElement("td");
+        var right = cc === vp.curC || cc === vp.pastC;
+        td.style.cssText =
+          "padding:6px 12px;white-space:nowrap;text-align:" + (right ? "right" : "left") +
+          ";font-variant-numeric:tabular-nums;";
+        td.textContent = row[cc] != null ? row[cc] : "";
+        tr.appendChild(td);
       }
-      scroller.scrollTop = prev;
-      btn.textContent = label;
-      copyTSV(doc, tsvFromCache(table, cache), btn);
-    })();
+      var ch = rowChange(row, vp.curC, vp.pastC);
+      var ctd = doc.createElement("td");
+      ctd.style.cssText = "padding:6px 12px;text-align:right;white-space:nowrap;";
+      ctd.innerHTML = ch.text ? changeChipHTML(ch.text, ch.num, mode) : "";
+      tr.appendChild(ctd);
+      tbody.appendChild(tr);
+    }
+    tbl.appendChild(tbody);
+    wrap.appendChild(tbl);
+    return wrap;
   }
 
   // ---------- Feature 2: % change on metric cards ----------
@@ -1120,9 +1216,6 @@
       relaxLegend(segTexts[st]);
     }
 
-    // Keep active Change columns in sync with virtualized rows that loaded/scrolled.
-    syncChangeColumns(roots);
-
     if (tAdded || mAdded) {
       console.log(
         "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
@@ -1163,24 +1256,6 @@
         } catch (e) {}
       }
     }
-
-    // Mixpanel virtualizes long tables, so scrolling swaps rows in/out without
-    // always firing childList mutations. A capture-phase scroll listener catches
-    // scrolls from any (nested/shadow) container and re-syncs active Change
-    // columns; the signature check keeps this cheap and loop-free.
-    var scrollScheduled = false;
-    document.addEventListener(
-      "scroll",
-      function () {
-        if (scrollScheduled) return;
-        scrollScheduled = true;
-        setTimeout(function () {
-          scrollScheduled = false;
-          syncChangeColumns(collectRoots());
-        }, 120);
-      },
-      true
-    );
 
     watchRoots(scan());
   } else {
