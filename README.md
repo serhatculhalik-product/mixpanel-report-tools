@@ -26,6 +26,7 @@ is placed just above the table instead.
 - Click **`⇄ Transpose`** to flip that specific table (rows ↔ columns).
 - The button then turns into **`Copy TSV`** — click it to copy the table as
   tab-separated values.
+- A **`↺` reset** icon appears next to it to restore the table's original view.
 
 ### 2. `% change` on metric cards
 Cards that show several big numbers get two buttons near the ellipsis menu:
@@ -34,6 +35,7 @@ Cards that show several big numbers get two buttons near the ellipsis menu:
   shows every other metric's change relative to it. Increases are green.
 - **`% change(-)`** — uses the **largest** value in the card as the baseline.
   Decreases are green (useful when *lower is better*).
+- A **`↺` reset** icon next to them restores the card's original values.
 
 **Control-group baseline:** if any metric's label contains the word **`control`**
 (e.g. an A/B test's control segment), it is used as the baseline instead of the

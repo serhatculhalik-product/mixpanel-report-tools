@@ -92,6 +92,17 @@
     return b;
   }
 
+  // A small square icon button (e.g. the reset glyph).
+  function mkIconButton(doc, glyph, title) {
+    var b = mkButton(doc, glyph);
+    b.title = title;
+    b.setAttribute("aria-label", title);
+    b.style.padding = "3px 7px";
+    b.style.fontSize = "13px";
+    b.style.lineHeight = "1";
+    return b;
+  }
+
   // ---------- Feature 1: Table transpose ----------
 
   function addTableControl(table) {
@@ -103,15 +114,22 @@
     }
     var overflow = findOverflowMenu(host);
 
+    var bar = doc.createElement("div");
+    bar.style.cssText = "display:inline-flex;gap:6px;align-items:center;";
     var btn = mkButton(doc, "\u21C4 Transpose");
-    placeControl(btn, host, overflow, table, 10);
+    var reset = mkIconButton(doc, "\u21BA", "Reset to original");
+    reset.style.display = "none";
+    bar.appendChild(btn);
+    bar.appendChild(reset);
+    placeControl(bar, host, overflow, table, 10);
 
-    btn.onclick = function (ev) {
+    function doTranspose(ev) {
       ev.preventDefault();
       ev.stopPropagation();
       var tsv = transposeTable(table);
       if (tsv == null) { btn.textContent = "Error"; return false; }
       btn.textContent = "Copy TSV";
+      reset.style.display = "";
       btn.onclick = function (e2) {
         e2.preventDefault();
         e2.stopPropagation();
@@ -119,7 +137,29 @@
         return false;
       };
       return false;
+    }
+
+    btn.onclick = doTranspose;
+
+    reset.onclick = function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      resetTable(table);
+      btn.textContent = "\u21C4 Transpose";
+      btn.onclick = doTranspose;
+      reset.style.display = "none";
+      return false;
     };
+  }
+
+  // Restore a transposed table to its pre-transpose markup.
+  function resetTable(table) {
+    if (table.__mpOrigHTML == null) return;
+    table.innerHTML = table.__mpOrigHTML;
+    if (table.__mpOrigStyle) table.setAttribute("style", table.__mpOrigStyle);
+    else table.removeAttribute("style");
+    table.removeAttribute("data-mp-transposed");
+    table.removeAttribute("data-mp-tsv");
   }
 
   function transposeTable(table) {
@@ -127,6 +167,12 @@
       // Already transposed (e.g. by a previous injection): reuse the cached TSV.
       if (table.getAttribute("data-mp-transposed") === "1") {
         return table.getAttribute("data-mp-tsv") || "";
+      }
+
+      // Snapshot the pristine markup once so Reset can restore the original view.
+      if (table.__mpOrigHTML == null) {
+        table.__mpOrigHTML = table.innerHTML;
+        table.__mpOrigStyle = table.getAttribute("style") || "";
       }
       var cells = [];
       var maxR = 0, maxC = 0;
@@ -364,17 +410,27 @@
     var overflow = findOverflowMenu(host);
 
     var bar = doc.createElement("div");
-    bar.style.cssText = "display:inline-flex;gap:6px;";
+    bar.style.cssText = "display:inline-flex;gap:6px;align-items:center;";
     var bPlus = mkButton(doc, "% change(+)");
     var bMinus = mkButton(doc, "% change(-)");
+    var bReset = mkIconButton(doc, "\u21BA", "Reset to original");
     bar.appendChild(bPlus);
     bar.appendChild(bMinus);
+    bar.appendChild(bReset);
 
     placeControl(bar, host, overflow, row, 10);
     if (!overflow) bar.style.margin = "8px 0 0 8px";
 
     bPlus.onclick = function (e) { e.preventDefault(); e.stopPropagation(); toggleMode(row, "min", bPlus, bMinus); return false; };
     bMinus.onclick = function (e) { e.preventDefault(); e.stopPropagation(); toggleMode(row, "max", bPlus, bMinus); return false; };
+    bReset.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      revertMetrics(row);
+      row.removeAttribute("data-mp-metric-mode");
+      setActive(bPlus, bMinus, null);
+      return false;
+    };
     return true;
   }
 
