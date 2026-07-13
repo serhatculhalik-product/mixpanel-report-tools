@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-13
+
+### Added
+- **Runs automatically** — the tools now load on Mixpanel pages (all frames) as
+  soon as the page is ready, so buttons appear without clicking the toolbar icon.
+  Clicking the icon still works as a manual re-scan / fallback for unusual frames.
+- **Sortable `Change` column on `Value (Past)` tables** — `% change(+/-)` collects
+  the entire table in one pass and shows a complete, static table with a `Change`
+  column; click the column header to sort (high→low, then low→high), and `Copy TSV`
+  follows the sort order.
+
+### Changed
+- **Full-table Copy TSV** — copying gathers every row of long (virtualized) tables,
+  not just the ones currently on screen, and escapes cells starting with `= + @`.
+- Replaced the fragile scroll-time Change-column syncing with a single upfront
+  collection, fixing cases where only the initially visible rows were computed.
+
 ## [1.0.0] - 2026-07-13
 
 First public release. A Chrome extension (Manifest V3) that makes Mixpanel
@@ -38,4 +55,5 @@ reports easier to read and compare.
 - Built against Mixpanel's current DOM; selectors may need updating if Mixpanel
   changes its markup.
 
+[1.1.0]: https://github.com/serhatculhalik-product/mixpanel-report-tools/releases/tag/v1.1.0
 [1.0.0]: https://github.com/serhatculhalik-product/mixpanel-report-tools/releases/tag/v1.0.0

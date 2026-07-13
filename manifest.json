@@ -1,14 +1,22 @@
 {
   "manifest_version": 3,
   "name": "Mixpanel Report Tools",
-  "version": "1.0.0",
-  "description": "Transpose Mixpanel tables in one click (keeps the native look), copy as TSV, and show % change against a min/max baseline on metric cards.",
+  "version": "1.1.0",
+  "description": "Auto-adds Transpose, Copy TSV, a sortable Change column, and % change comparisons to Mixpanel report cards — no click needed.",
   "permissions": ["scripting", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://mixpanel.com/*", "https://*.mixpanel.com/*"],
+      "js": ["transpose.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
-    "default_title": "Mixpanel Report Tools"
+    "default_title": "Mixpanel Report Tools (runs automatically; click to re-scan)"
   }
 }

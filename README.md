@@ -1,7 +1,8 @@
 # Mixpanel Report Tools
 
-A tiny Chrome extension (Manifest V3) for **Mixpanel** dashboards. Click the
-toolbar icon and it adds small action buttons to each report card so you can:
+A tiny Chrome extension (Manifest V3) for **Mixpanel** dashboards. It runs
+automatically on Mixpanel pages and adds small action buttons to each report
+card so you can:
 
 - **Transpose wide tables** so long horizontal reports become vertical — while
   keeping Mixpanel's native look (fonts, colors, lift pills).
@@ -11,8 +12,7 @@ toolbar icon and it adds small action buttons to each report card so you can:
   a baseline (the A/B **control** group when present, otherwise the min or max
   value).
 
-No data leaves your browser. The extension only runs when you click its toolbar
-icon.
+No data leaves your browser. The extension only runs on Mixpanel pages.
 
 ---
 
@@ -131,12 +131,14 @@ You **don't need to be a developer** to install this — just download and load 
 
 ## Usage
 
-**Getting started (do this once per page):**
+**Getting started:**
 
 1. Open a Mixpanel report or board.
-2. Click the **Mixpanel Report Tools** icon in your Chrome toolbar.
-3. Buttons appear on each card. From now on the extension also adds buttons to
-   any card that finishes loading later — you don't need to click the icon again.
+2. Buttons appear on each card automatically — no need to click anything. The
+   extension also adds buttons to cards that finish loading later.
+
+> If a card ever loads without buttons (rare, e.g. an unusual embedded frame),
+> click the **Mixpanel Report Tools** toolbar icon to re-scan the page.
 
 The exact buttons depend on the card. Below is what to do for each type.
 
