@@ -468,17 +468,28 @@
     }
   }
 
-  function revertMetrics(row) {
-    var vals = row.querySelectorAll('[class*="_value_"]');
-    for (var i = 0; i < vals.length; i++) {
-      var v = vals[i];
-      if (v.hasAttribute("data-mp-orig")) {
-        v.innerHTML = v.getAttribute("data-mp-orig");
-        v.style.color = v.hasAttribute("data-mp-ocolor") ? v.getAttribute("data-mp-ocolor") : "";
+  function revertMetrics(scope) {
+    var metrics = collectMetrics(scope);
+    for (var i = 0; i < metrics.length; i++) {
+      var el = metrics[i].valueEl;
+      if (el.hasAttribute("data-mp-orig")) {
+        el.innerHTML = el.getAttribute("data-mp-orig"); // non-compared path
+      }
+      if (el.hasAttribute("data-mp-ocolor")) {
+        el.style.color = el.getAttribute("data-mp-ocolor");
+      } else if (el.hasAttribute("data-mp-orig")) {
+        el.style.color = "";
+      }
+      // Remove the "(diff)" we appended to the native compared-to line.
+      var note = findComparisonNote(metrics[i].container);
+      if (note) {
+        var ex = note.querySelectorAll("[data-mp-cmp-extra]");
+        for (var j = 0; j < ex.length; j++) ex[j].remove();
       }
     }
-    var notes = row.querySelectorAll("[data-mp-change-note]");
-    for (var j = 0; j < notes.length; j++) notes[j].remove();
+    // Remove our own recompute notes (non-compared % change path).
+    var own = scope.querySelectorAll("[data-mp-change-note]");
+    for (var k = 0; k < own.length; k++) own[k].remove();
   }
 
   // ---------- Already-compared cards: add the raw difference on demand ----------
@@ -521,6 +532,11 @@
       var el = mt.valueEl;
       var note = findComparisonNote(mt.container);
       if (!note) continue;
+
+      // Drop any "(diff)" we added before, then read the two shown numbers.
+      var prev = note.querySelector("[data-mp-cmp-extra]");
+      if (prev) prev.remove();
+
       var m = (note.textContent || "").match(
         /([-\d.,]+\s*%?)\s*compared to\s*([-\d.,]+\s*%?)/i
       );
@@ -531,25 +547,22 @@
       var isPct = /%/.test(m[1]) || /%/.test(m[2]);
       var diff = a - b;
 
-      // Keep Mixpanel's own value; remember it so we can restore on revert.
-      if (!el.hasAttribute("data-mp-orig")) {
-        el.setAttribute("data-mp-orig", el.innerHTML);
+      // Recolor Mixpanel's own value per the chosen favorable direction; keep
+      // the value text itself untouched (remember original color for revert).
+      if (!el.hasAttribute("data-mp-ocolor")) {
         el.setAttribute("data-mp-ocolor", el.style.color || "");
       }
-      var prev = el.querySelector("[data-mp-cmp-extra]");
-      if (prev) prev.remove();
-
-      var doc = el.ownerDocument;
-      var span = doc.createElement("span");
-      span.setAttribute("data-mp-cmp-extra", "1");
-      span.style.cssText =
-        "font-size:0.5em;opacity:.85;font-weight:inherit;margin-left:.15em;";
-      span.textContent = "~" + (isPct ? fmtPP(diff) : fmtDiff(diff));
-      el.appendChild(span);
-
       var change =
         b === 0 ? (diff === 0 ? 0 : diff > 0 ? 100 : -100) : (diff / Math.abs(b)) * 100;
       el.style.color = colorFor(change, mode);
+
+      // Add the raw difference in parentheses on the "X compared to Y" line.
+      var doc = note.ownerDocument;
+      var span = doc.createElement("span");
+      span.setAttribute("data-mp-cmp-extra", "1");
+      span.style.cssText = "margin-left:6px;font-variant-numeric:tabular-nums;";
+      span.textContent = "(" + (isPct ? fmtPP(diff) : fmtDiff(diff)) + ")";
+      note.appendChild(span);
     }
   }
 
