@@ -95,17 +95,34 @@ You **don't need to be a developer** to install this — just download and load 
 ## Usage
 
 1. Open a Mixpanel report/board.
-2. Click the extension icon in the toolbar.
-3. Use the buttons that appear on each card:
-   - **`⇄ Transpose`** → transpose the table, then **`Copy TSV`** to copy it.
-   - **`% change(+)` / `% change(-)`** → show percentage change against the
-     baseline (the `control` group if present, otherwise min/max).
+2. Click the extension icon in the toolbar — buttons appear on each card.
 
-> Once activated on a page, the extension keeps watching it (light DOM and every
-> shadow root): tables and cards that finish loading **after** you clicked get
-> their buttons automatically — no matter how long you wait — so you don't need
-> to click the icon again. It's event-driven (no polling), so it stays idle until
-> new content actually appears.
+Then, depending on the card:
+
+**Transpose & copy a table**
+- Click **`⇄ Transpose`** to flip the table (rows ↔ columns).
+- The button becomes **`Copy TSV`** — click it to copy the table, then paste
+  into Google Sheets / Excel.
+
+**Compare metrics on a card (`% change`)**
+- Click **`% change(+)`** to compare every metric against the **smallest** value
+  (increases shown in green), or **`% change(-)`** to compare against the
+  **largest** value (decreases shown in green).
+- Each metric shows its `%` change plus an `X compared to Y` note with the raw
+  difference as a colored pill (`+0.33` for numbers, `+0.13pp` for percentages).
+- If a metric is labelled **`control`**, it's used as the baseline automatically —
+  the `(+)` / `(-)` buttons then just flip which direction is green.
+- On cards Mixpanel **already compares**, its own `%` stays; pressing a button
+  only adds the raw-difference pill and recolors for your chosen direction.
+
+**Reset**
+- Click the **`↺`** icon (next to the buttons) to return a table or card to its
+  original view. Clicking the active `% change` button again also reverts it.
+
+> Once activated on a page, the extension keeps watching it: tables and cards that
+> finish loading **after** you clicked get their buttons automatically — no matter
+> how long you wait — so you don't need to click the icon again. It's event-driven
+> (no polling), so it stays idle until new content actually appears.
 
 ---
 
