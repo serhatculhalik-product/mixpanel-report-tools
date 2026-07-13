@@ -555,34 +555,75 @@
 
   // ---------- Main flow ----------
 
-  var tables = deepQueryAll(document, ".mp-data-table", []);
-  var tAdded = 0;
-  for (var t = 0; t < tables.length; t++) {
-    var tb = tables[t];
-    if (tb.getAttribute("data-mp-ctrl") === "1") continue;
-    tb.setAttribute("data-mp-ctrl", "1");
-    addTableControl(tb);
-    tAdded++;
+  // Idempotent scan: safe to call many times. Buttons/state are guarded by
+  // data-attributes, so only newly loaded tables/cards get processed.
+  function scan() {
+    var tables = deepQueryAll(document, ".mp-data-table", []);
+    var tAdded = 0;
+    for (var t = 0; t < tables.length; t++) {
+      var tb = tables[t];
+      if (tb.getAttribute("data-mp-ctrl") === "1") continue;
+      tb.setAttribute("data-mp-ctrl", "1");
+      addTableControl(tb);
+      tAdded++;
+    }
+
+    // Metric cards: treat the whole MultiMetricChart as one group (it may span rows).
+    // Fall back to a single _bottom-row_ when there is no MultiMetricChart.
+    var metricRoots = deepQueryAll(document, '[data-sentry-component="MultiMetricChart"]', []);
+    if (!metricRoots.length) {
+      metricRoots = deepQueryAll(document, '[class*="_bottom-row_"]', []);
+    }
+    var mAdded = 0;
+    for (var r = 0; r < metricRoots.length; r++) {
+      if (addMetricControl(metricRoots[r])) mAdded++;
+    }
+
+    // Wrap legend text (drop to the next line instead of truncating)
+    var segTexts = deepQueryAll(document, '[class*="_segment-text_"]', []);
+    for (var st = 0; st < segTexts.length; st++) {
+      if (segTexts[st].getAttribute("data-mp-wrapped") === "1") continue;
+      segTexts[st].setAttribute("data-mp-wrapped", "1");
+      relaxLegend(segTexts[st]);
+    }
+
+    if (tAdded || mAdded) {
+      console.log(
+        "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
+      );
+    }
+    return tAdded + mAdded;
   }
 
-  // Metric cards: treat the whole MultiMetricChart as one group (it may span rows).
-  // Fall back to a single _bottom-row_ when there is no MultiMetricChart.
-  var metricRoots = deepQueryAll(document, '[data-sentry-component="MultiMetricChart"]', []);
-  if (!metricRoots.length) {
-    metricRoots = deepQueryAll(document, '[class*="_bottom-row_"]', []);
-  }
-  var mAdded = 0;
-  for (var r = 0; r < metricRoots.length; r++) {
-    if (addMetricControl(metricRoots[r])) mAdded++;
-  }
+  scan();
 
-  // Wrap legend text (drop to the next line instead of truncating)
-  var segTexts = deepQueryAll(document, '[class*="_segment-text_"]', []);
-  for (var st = 0; st < segTexts.length; st++) relaxLegend(segTexts[st]);
+  // Once activated, keep watching so tables/cards that finish loading later get
+  // their buttons automatically (no need to click the extension again).
+  // A DOM observer covers light-DOM changes; a bounded poll also catches data
+  // that populates inside shadow DOM (which the observer cannot see).
+  if (!window.__mpTransposerWatching) {
+    window.__mpTransposerWatching = true;
 
-  if (tables.length || metricRoots.length) {
-    console.log(
-      "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
-    );
+    var scheduled = false;
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      setTimeout(function () { scheduled = false; scan(); }, 300);
+    }
+
+    try {
+      var obs = new MutationObserver(schedule);
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {}
+
+    var polls = 0;
+    var timer = setInterval(function () {
+      polls++;
+      scan();
+      if (polls >= 60) clearInterval(timer); // ~60s warm-up window
+    }, 1000);
+  } else {
+    // Re-clicked while already watching: just run an immediate extra scan.
+    scan();
   }
 })();

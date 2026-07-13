@@ -111,8 +111,10 @@ Then follow steps 4–7 above and select the cloned folder.
    - **`% change(+)` / `% change(-)`** → show percentage change against the
      baseline (the `control` group if present, otherwise min/max).
 
-> Tip: click the icon again after new tables/cards load — buttons are added only
-> to cards that don't already have them.
+> Once activated on a page, the extension keeps watching it: tables and cards
+> that finish loading **after** you clicked get their buttons automatically, so
+> you don't need to click the icon again (it watches for ~60s and also reacts to
+> later layout changes).
 
 ---
 
