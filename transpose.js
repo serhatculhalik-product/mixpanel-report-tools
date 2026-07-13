@@ -205,7 +205,7 @@
       bCopy.onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
-        copyTSV(doc, buildTableTSV(table), bCopy);
+        collectAndCopyTSV(table, bCopy, doc);
         return false;
       };
     }
@@ -557,42 +557,135 @@
     }
   }
 
-  // Build TSV for a non-transposed table, in normal (row) orientation, including
-  // any injected "Change" column.
-  function buildTableTSV(table) {
-    var cells = [];
-    var maxR = 0, maxC = 0;
-    function place(el, off) {
-      var r = parseInt(el.style.gridRowStart, 10) - 1;
-      var c = parseInt(el.style.gridColumnStart, 10) - 1 + off;
-      if (!isFinite(r) || !isFinite(c) || r < 0 || c < 0) return;
-      cells.push({ r: r, c: c, el: el });
-      if (r > maxR) maxR = r;
-      if (c > maxC) maxC = c;
+  // ----- Copy TSV for the whole (virtualized) table -----
+
+  function sleep(ms) {
+    return new Promise(function (res) { setTimeout(res, ms); });
+  }
+
+  // Nearest vertically-scrollable ancestor (Mixpanel virtualizes long tables in
+  // a scroll container), crossing shadow boundaries.
+  function getScrollContainer(el) {
+    var win = (el.ownerDocument && el.ownerDocument.defaultView) || window;
+    var n = el.parentElement || el.parentNode;
+    while (n && n.nodeType === 1) {
+      try {
+        var oy = win.getComputedStyle(n).overflowY;
+        if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 4) return n;
+      } catch (e) {}
+      if (n.parentElement) n = n.parentElement;
+      else if (n.getRootNode && n.getRootNode().host) n = n.getRootNode().host;
+      else n = n.parentNode;
+      if (n && n.nodeType === 11) n = n.host;
     }
+    return null;
+  }
+
+  // Merge the currently-rendered rows into the table's row cache (keyed by the
+  // absolute grid row/column index, so scrolling fills in the full dataset).
+  function accumulateRows(table, cache) {
     var fixed = table.querySelector(":scope > .fixed-columns");
     var fixedCols = 0;
     if (fixed) {
-      var fcells = fixed.querySelectorAll(":scope > .mp-table-cell");
-      for (var i = 0; i < fcells.length; i++) {
-        var cc = parseInt(fcells[i].style.gridColumnStart, 10);
+      var fc = fixed.querySelectorAll(":scope > .mp-table-cell");
+      for (var i = 0; i < fc.length; i++) {
+        var cc = parseInt(fc[i].style.gridColumnStart, 10);
         if (isFinite(cc) && cc > fixedCols) fixedCols = cc;
       }
-      for (var f = 0; f < fcells.length; f++) place(fcells[f], 0);
+    }
+    function store(el, off) {
+      if (el.getAttribute("data-mp-vp-cell") === "1" || el.getAttribute("data-mp-vp-header") === "1") return;
+      var r = parseInt(el.style.gridRowStart, 10);
+      var c = parseInt(el.style.gridColumnStart, 10) + off;
+      if (!isFinite(r) || !isFinite(c)) return;
+      cache.rows[r] = cache.rows[r] || {};
+      cache.rows[r][c] = cellText(el);
+      if (c > cache.cols) cache.cols = c;
+    }
+    if (fixed) {
+      var fcells = fixed.querySelectorAll(":scope > .mp-table-cell");
+      for (var a = 0; a < fcells.length; a++) store(fcells[a], 0);
     }
     var sc = findScrollable(table);
     if (sc) {
       var scells = sc.querySelectorAll(":scope > .mp-table-cell");
-      for (var s = 0; s < scells.length; s++) place(scells[s], fixedCols);
+      for (var b = 0; b < scells.length; b++) store(scells[b], fixedCols);
     }
-    if (!cells.length) return "";
-    var rows = maxR + 1, cols = maxC + 1;
-    var grid = [];
-    for (var a = 0; a < rows; a++) grid.push(new Array(cols).fill(""));
-    for (var g = 0; g < cells.length; g++) grid[cells[g].r][cells[g].c] = cellText(cells[g].el);
+  }
+
+  function tsvFromCache(table, cache) {
+    var rowKeys = Object.keys(cache.rows).map(Number).sort(function (x, y) { return x - y; });
+    var cols = cache.cols;
+    var mode = table.getAttribute("data-mp-vp-mode");
+    var header = cache.rows[1] || {};
+    var pastC = null;
+    for (var c = 1; c <= cols; c++) if (/\(past\)/i.test(header[c] || "")) pastC = c;
+    var curC = pastC != null ? pastC - 1 : null;
+    var addChange = mode && pastC != null && curC != null;
+
     var lines = [];
-    for (var rr = 0; rr < rows; rr++) lines.push(grid[rr].map(tsvGuard).join("\t"));
+    for (var i = 0; i < rowKeys.length; i++) {
+      var rk = rowKeys[i];
+      var row = cache.rows[rk];
+      var arr = [];
+      for (var cc = 1; cc <= cols; cc++) arr.push(tsvGuard(row[cc] != null ? row[cc] : ""));
+      if (addChange) {
+        if (rk === 1) {
+          arr.push("Change");
+        } else {
+          var curTxt = row[curC], pastTxt = row[pastC];
+          if (curTxt != null && pastTxt != null) {
+            var isPct = /%/.test(curTxt) || /%/.test(pastTxt);
+            var d = parseNum(curTxt) - parseNum(pastTxt);
+            arr.push(tsvGuard(isFinite(d) ? (isPct ? fmtPP(d) : fmtDiff(d)) : ""));
+          } else {
+            arr.push("");
+          }
+        }
+      }
+      lines.push(arr.join("\t"));
+    }
     return lines.join("\n");
+  }
+
+  // Copy the FULL table: auto-scroll through the virtualized rows to render them
+  // all, accumulate into a cache, copy, then restore the scroll position.
+  function collectAndCopyTSV(table, btn, doc) {
+    var scroller = getScrollContainer(table);
+    var cache = { cols: 0, rows: {} };
+
+    if (!scroller) {
+      accumulateRows(table, cache);
+      copyTSV(doc, tsvFromCache(table, cache), btn);
+      return;
+    }
+
+    var label = btn.textContent;
+    btn.textContent = "Copying\u2026";
+    var prev = scroller.scrollTop;
+    var step = Math.max(120, Math.floor(scroller.clientHeight * 0.8));
+
+    (async function () {
+      try {
+        scroller.scrollTop = 0;
+        await sleep(90);
+        accumulateRows(table, cache);
+        var guard = 0;
+        while (scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 && guard++ < 1000) {
+          scroller.scrollTop = Math.min(scroller.scrollHeight, scroller.scrollTop + step);
+          await sleep(90);
+          accumulateRows(table, cache);
+        }
+        // Bottom row sometimes settles after the last jump.
+        await sleep(90);
+        accumulateRows(table, cache);
+      } catch (e) {
+        console.error("Mixpanel Transposer collect error:", e);
+      }
+      scroller.scrollTop = prev;
+      btn.textContent = label;
+      copyTSV(doc, tsvFromCache(table, cache), btn);
+    })();
   }
 
   // ---------- Feature 2: % change on metric cards ----------

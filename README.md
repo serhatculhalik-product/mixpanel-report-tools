@@ -36,7 +36,8 @@ When a table has a **`Value (Past)`** comparison column, it also gets
 (current `Value` − `Value (Past)`) as a **bold highlight pill** — `pp` for
 percentages (e.g. `-0.23pp`) or the raw net difference for numbers. The
 `(+)` / `(-)` buttons only decide which direction is green (`(+)` = up is good,
-`(-)` = down is good). **`Copy TSV`** copies the table, including the new column.
+`(-)` = down is good). **`Copy TSV`** auto-scrolls the (virtualized) table to
+collect **every row**, then copies it including the new column.
 
 ### 4. `% change` baseline on metric cards
 Cards that show several big numbers get two buttons near the ellipsis menu:
@@ -116,7 +117,9 @@ Then, depending on the card:
 **Add a `Change` column to a `Value (Past)` table**
 - Click **`% change(+)`** or **`% change(-)`** to add a **`Change`** column with
   each row's `Value` − `Value (Past)` (green in your chosen direction).
-- Click **`Copy TSV`** to copy the table with the new column.
+- Click **`Copy TSV`** to copy the table with the new column. It briefly
+  auto-scrolls the table to gather **all rows** (Mixpanel only keeps the visible
+  ones loaded), so you get the full list — not just what's on screen.
 
 **Compare metrics on a card (`% change`)**
 - Click **`% change(+)`** to compare every metric against the **smallest** value
