@@ -53,6 +53,16 @@ grid). The whole `MultiMetricChart` is targeted and **all metrics in the card ar
 compared as one group** — the baseline is the `control` metric if one exists,
 otherwise the min (`+`) or max (`−`) of every value in the card, not per row.
 
+### 3. Already-compared cards
+Some Mixpanel cards already come compared natively — the value is a `%` change
+with an "X compared to Y" note. On these cards the extension **does not add the
+`% change` buttons and does not recompute anything**. It simply appends the
+missing raw difference next to the value, taken from the two numbers shown:
+
+- Plain numbers → net difference, e.g. `~+0.33` (from `8.11 compared to 7.78`)
+- Percentages → percentage-point delta, e.g. `~+0.13pp` (from
+  `61.79% compared to 61.66%`)
+
 Legend text that doesn't fit on one line **wraps** instead of being truncated
 with `…`.
 

@@ -480,6 +480,68 @@
     for (var j = 0; j < notes.length; j++) notes[j].remove();
   }
 
+  // ---------- Already-compared cards: only add the raw difference ----------
+  // Some Mixpanel cards already come compared natively: the value is a % change
+  // and there is an "X compared to Y" note. For those we don't recompute; we
+  // just append the missing raw difference (net diff for plain numbers, or the
+  // percentage-point delta for percentages), derived from the two numbers shown.
+
+  // Find the tightest element whose text reads "... compared to ..." (native,
+  // i.e. not one of our own [data-mp-change-note] notes).
+  function findComparisonNote(container) {
+    var els = deepQueryAll(container, "*", []);
+    for (var i = 0; i < els.length; i++) {
+      var e = els[i];
+      if (e.hasAttribute && e.hasAttribute("data-mp-change-note")) continue;
+      if (e.closest && e.closest("[data-mp-change-note]")) continue;
+      if (!/compared to/i.test(e.textContent || "")) continue;
+      var childHit = false;
+      for (var j = 0; j < e.children.length; j++) {
+        if (/compared to/i.test(e.children[j].textContent || "")) { childHit = true; break; }
+      }
+      if (!childHit) return e;
+    }
+    return null;
+  }
+
+  function hasNativeComparison(scope) {
+    var metrics = collectMetrics(scope);
+    for (var i = 0; i < metrics.length; i++) {
+      if (findComparisonNote(metrics[i].container)) return true;
+    }
+    return false;
+  }
+
+  function augmentComparisons(scope) {
+    var metrics = collectMetrics(scope);
+    var added = 0;
+    for (var i = 0; i < metrics.length; i++) {
+      var mt = metrics[i];
+      if (mt.container.getAttribute("data-mp-cmp-diff") === "1") continue;
+      var note = findComparisonNote(mt.container);
+      if (!note) continue;
+      var m = (note.textContent || "").match(
+        /([-\d.,]+\s*%?)\s*compared to\s*([-\d.,]+\s*%?)/i
+      );
+      if (!m) continue;
+      var a = parseNum(m[1]);
+      var b = parseNum(m[2]);
+      if (!isFinite(a) || !isFinite(b)) continue;
+      var isPct = /%/.test(m[1]) || /%/.test(m[2]);
+      var diff = a - b;
+      var doc = mt.valueEl.ownerDocument;
+      var span = doc.createElement("span");
+      span.setAttribute("data-mp-cmp-extra", "1");
+      span.style.cssText =
+        "font-size:0.5em;opacity:.85;font-weight:inherit;margin-left:.15em;";
+      span.textContent = "~" + (isPct ? fmtPP(diff) : fmtDiff(diff));
+      mt.valueEl.appendChild(span);
+      mt.container.setAttribute("data-mp-cmp-diff", "1");
+      added++;
+    }
+    return added;
+  }
+
   // ---------- Main flow ----------
 
   var tables = deepQueryAll(document, ".mp-data-table", []);
@@ -499,8 +561,15 @@
     metricRoots = deepQueryAll(document, '[class*="_bottom-row_"]', []);
   }
   var mAdded = 0;
+  var cAdded = 0;
   for (var r = 0; r < metricRoots.length; r++) {
-    if (addMetricControl(metricRoots[r])) mAdded++;
+    // If the card already shows a native comparison, only add the raw diff.
+    // Otherwise offer the % change(+/-) buttons.
+    if (hasNativeComparison(metricRoots[r])) {
+      cAdded += augmentComparisons(metricRoots[r]);
+    } else if (addMetricControl(metricRoots[r])) {
+      mAdded++;
+    }
   }
 
   // Wrap legend text (drop to the next line instead of truncating)
@@ -509,7 +578,8 @@
 
   if (tables.length || metricRoots.length) {
     console.log(
-      "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
+      "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded +
+        " metric card(s); added raw diff to " + cAdded + " already-compared value(s)."
     );
   }
 })();
