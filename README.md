@@ -91,10 +91,7 @@ only runs when you click its toolbar icon.
 
 ## Installation
 
-You **don't need to be a developer** to install this. Pick one of the two options
-below — Option A is the easiest.
-
-### Option A — Download from GitHub (recommended)
+You **don't need to be a developer** to install this — just download and load it.
 
 1. Open the repo page:
    [github.com/serhatculhalik-product/mixpanel-report-tools](https://github.com/serhatculhalik-product/mixpanel-report-tools)
@@ -110,14 +107,6 @@ below — Option A is the easiest.
 
 > Keep the unzipped folder on your computer. If you delete or move it, Chrome
 > disables the extension.
-
-### Option B — Clone with git (for developers)
-
-```bash
-git clone https://github.com/serhatculhalik-product/mixpanel-report-tools.git
-```
-
-Then follow steps 4–7 above and select the cloned folder.
 
 ## Usage
 
@@ -136,31 +125,12 @@ Then follow steps 4–7 above and select the cloned folder.
 
 ---
 
-## How it works (technical — optional)
+## Roadmap & feedback
 
-You can safely skip this section; it's here for the curious and for developers.
+This tool is built for **product managers and analysts**, so you don't need to
+write code to help shape it. All feedback happens in **GitHub Discussions**.
 
-- `manifest.json` — MV3 config. Uses `scripting` + `activeTab` and
-  `host_permissions: <all_urls>` so it works on any Mixpanel host.
-- `background.js` — a service worker that, on toolbar click, injects
-  `transpose.js` into **all frames** of the active tab (Mixpanel often renders
-  tables inside cross-origin iframes, so `allFrames: true` is required).
-- `transpose.js` — the content script. It traverses iframes and shadow DOM to
-  find tables and metric cards, adds the buttons, rewrites CSS `grid-area` values
-  to transpose in place, and computes the `% change` values.
-
-## Notes & limitations
-
-- Built against Mixpanel's current DOM (class names like `.mp-data-table`,
-  `MultiMetricChart`). If Mixpanel changes its markup, selectors may need
-  updating.
-- Tables are transposed **in place** by rewriting the existing grid, so the
-  native styling is preserved instead of being re-created.
-- Everything runs locally in the page; nothing is sent to any server.
-
-## Roadmap
-
-Planned or under consideration (order may change):
+**On the roadmap** (order may change — vote or suggest in Discussions):
 
 - [ ] Export **all tables on a board** at once into a single spreadsheet
 - [ ] **Reorder / hide columns** before copying
@@ -168,21 +138,14 @@ Planned or under consideration (order may change):
 - [ ] Optional **CSV** copy in addition to TSV
 - [ ] A small popup to toggle each feature on/off
 
-Have an idea? See **Feedback & contributing** below — no coding required.
+**Have a question, idea, bug, or want a new report type supported?** Start a
+discussion on the
+[Discussions page](https://github.com/serhatculhalik-product/mixpanel-report-tools/discussions):
+click **New discussion**, pick a category, and describe what you expected vs.
+what happened (a screenshot of the card helps a lot).
 
-## Feedback & contributing
-
-This tool is built for **product managers and analysts**, so you don't need to
-write code to help improve it. All feedback happens in **GitHub Discussions**:
-
-- **Have a question, idea, bug, or feature request?** Start a discussion on the
-  [Discussions page](https://github.com/serhatculhalik-product/mixpanel-report-tools/discussions):
-  click **New discussion**, pick a category, describe what you expected vs. what
-  happened, and add a screenshot if you can.
-- **Want a new Mixpanel report type supported?** Open a discussion with a
-  screenshot of the card and the comparison you'd like to see.
-- **Developers:** contributions are welcome — fork the repo, create a branch, and
-  open a pull request.
+Developers are welcome too — fork the repo, create a branch, and open a pull
+request.
 
 ## Changelog
 
