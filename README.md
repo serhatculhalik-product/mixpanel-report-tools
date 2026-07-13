@@ -50,13 +50,7 @@ segment), it is used as the baseline instead of the min/max — so every variant
 compared against control. In that case the `(+)` / `(-)` buttons only decide
 which direction is shown as green.
 
-### 5. Whole-card grouping (multi-row reports)
-A card can contain several rows/segments (e.g. a 2×2 grid). The whole
-`MultiMetricChart` is targeted and **all metrics in the card are compared as one
-group** — against the `control` metric if one exists, otherwise the min (`+`) or
-max (`−`) of every value in the card, not per row.
-
-### 6. Already-compared cards
+### 5. Already-compared cards
 Some Mixpanel cards already come compared natively (the value is a `%` change
 with an "X compared to Y" note). The extension keeps Mixpanel's `%` value, and
 when you press **`% change(+)` / `% change(-)`** it:
@@ -68,24 +62,14 @@ when you press **`% change(+)` / `% change(-)`** it:
 - recolors each value so the direction you care about is green — `(+)` means an
   increase is good, `(-)` means a decrease is good.
 
-### 7. Reset to original
+### 6. Reset to original
 A **`↺` reset** icon sits next to the buttons on both tables and metric cards.
 Click it to return the table or card to its **original view**, as if no button
 had been pressed. (Clicking the active `% change` button again also reverts it.)
 
-### 8. Legend text wrapping
+### 7. Legend text wrapping
 Legend/segment text that doesn't fit on one line **wraps** instead of being
 truncated with `…`.
-
-### 9. Auto-detect late-loading widgets
-Once activated on a page, the extension keeps watching it (light DOM and every
-shadow root): tables and cards that finish loading **after** you clicked get
-their buttons automatically — no matter how long you wait. It's event-driven
-(no polling), so it stays idle until new content actually appears.
-
-### 10. Local & private
-Everything runs in the page; **no data leaves your browser** and the extension
-only runs when you click its toolbar icon.
 
 ---
 
