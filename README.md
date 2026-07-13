@@ -55,13 +55,17 @@ otherwise the min (`+`) or max (`−`) of every value in the card, not per row.
 
 ### 3. Already-compared cards
 Some Mixpanel cards already come compared natively — the value is a `%` change
-with an "X compared to Y" note. On these cards the extension **does not add the
-`% change` buttons and does not recompute anything**. It simply appends the
-missing raw difference next to the value, taken from the two numbers shown:
+with an "X compared to Y" note. The extension keeps Mixpanel's `%` value and
+still shows the **`% change(+)` / `% change(-)`** buttons. When you press one it:
 
-- Plain numbers → net difference, e.g. `~+0.33` (from `8.11 compared to 7.78`)
-- Percentages → percentage-point delta, e.g. `~+0.13pp` (from
-  `61.79% compared to 61.66%`)
+- appends the missing raw difference next to the value, from the two numbers
+  shown — net difference for plain numbers (e.g. `~+0.33` from
+  `8.11 compared to 7.78`) or the percentage-point delta for percentages
+  (e.g. `~+0.13pp` from `61.79% compared to 61.66%`);
+- recolors each value so the direction you care about is green — `(+)` means an
+  increase is good, `(-)` means a decrease is good.
+
+Press the active button again to restore Mixpanel's original value and color.
 
 Legend text that doesn't fit on one line **wraps** instead of being truncated
 with `…`.

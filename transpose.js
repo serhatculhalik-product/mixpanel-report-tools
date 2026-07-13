@@ -382,7 +382,8 @@
       setActive(bPlus, bMinus, null);
       return;
     }
-    renderMetrics(row, mode);
+    if (hasNativeComparison(row)) renderCompared(row, mode);
+    else renderMetrics(row, mode);
     row.setAttribute("data-mp-metric-mode", mode);
     setActive(bPlus, bMinus, mode);
   }
@@ -473,18 +474,19 @@
       var v = vals[i];
       if (v.hasAttribute("data-mp-orig")) {
         v.innerHTML = v.getAttribute("data-mp-orig");
-        v.style.color = "";
+        v.style.color = v.hasAttribute("data-mp-ocolor") ? v.getAttribute("data-mp-ocolor") : "";
       }
     }
     var notes = row.querySelectorAll("[data-mp-change-note]");
     for (var j = 0; j < notes.length; j++) notes[j].remove();
   }
 
-  // ---------- Already-compared cards: only add the raw difference ----------
+  // ---------- Already-compared cards: add the raw difference on demand ----------
   // Some Mixpanel cards already come compared natively: the value is a % change
-  // and there is an "X compared to Y" note. For those we don't recompute; we
-  // just append the missing raw difference (net diff for plain numbers, or the
-  // percentage-point delta for percentages), derived from the two numbers shown.
+  // and there is an "X compared to Y" note. For those we keep Mixpanel's % value
+  // and, when a % change button is pressed, just append the missing raw
+  // difference (net diff for plain numbers, or the percentage-point delta for
+  // percentages) and recolor per the chosen favorable direction.
 
   // Find the tightest element whose text reads "... compared to ..." (native,
   // i.e. not one of our own [data-mp-change-note] notes).
@@ -512,12 +514,11 @@
     return false;
   }
 
-  function augmentComparisons(scope) {
+  function renderCompared(scope, mode) {
     var metrics = collectMetrics(scope);
-    var added = 0;
     for (var i = 0; i < metrics.length; i++) {
       var mt = metrics[i];
-      if (mt.container.getAttribute("data-mp-cmp-diff") === "1") continue;
+      var el = mt.valueEl;
       var note = findComparisonNote(mt.container);
       if (!note) continue;
       var m = (note.textContent || "").match(
@@ -529,17 +530,27 @@
       if (!isFinite(a) || !isFinite(b)) continue;
       var isPct = /%/.test(m[1]) || /%/.test(m[2]);
       var diff = a - b;
-      var doc = mt.valueEl.ownerDocument;
+
+      // Keep Mixpanel's own value; remember it so we can restore on revert.
+      if (!el.hasAttribute("data-mp-orig")) {
+        el.setAttribute("data-mp-orig", el.innerHTML);
+        el.setAttribute("data-mp-ocolor", el.style.color || "");
+      }
+      var prev = el.querySelector("[data-mp-cmp-extra]");
+      if (prev) prev.remove();
+
+      var doc = el.ownerDocument;
       var span = doc.createElement("span");
       span.setAttribute("data-mp-cmp-extra", "1");
       span.style.cssText =
         "font-size:0.5em;opacity:.85;font-weight:inherit;margin-left:.15em;";
       span.textContent = "~" + (isPct ? fmtPP(diff) : fmtDiff(diff));
-      mt.valueEl.appendChild(span);
-      mt.container.setAttribute("data-mp-cmp-diff", "1");
-      added++;
+      el.appendChild(span);
+
+      var change =
+        b === 0 ? (diff === 0 ? 0 : diff > 0 ? 100 : -100) : (diff / Math.abs(b)) * 100;
+      el.style.color = colorFor(change, mode);
     }
-    return added;
   }
 
   // ---------- Main flow ----------
@@ -561,15 +572,8 @@
     metricRoots = deepQueryAll(document, '[class*="_bottom-row_"]', []);
   }
   var mAdded = 0;
-  var cAdded = 0;
   for (var r = 0; r < metricRoots.length; r++) {
-    // If the card already shows a native comparison, only add the raw diff.
-    // Otherwise offer the % change(+/-) buttons.
-    if (hasNativeComparison(metricRoots[r])) {
-      cAdded += augmentComparisons(metricRoots[r]);
-    } else if (addMetricControl(metricRoots[r])) {
-      mAdded++;
-    }
+    if (addMetricControl(metricRoots[r])) mAdded++;
   }
 
   // Wrap legend text (drop to the next line instead of truncating)
@@ -578,8 +582,7 @@
 
   if (tables.length || metricRoots.length) {
     console.log(
-      "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded +
-        " metric card(s); added raw diff to " + cAdded + " already-compared value(s)."
+      "Mixpanel Transposer: added buttons to " + tAdded + " table(s) and " + mAdded + " metric card(s)."
     );
   }
 })();
