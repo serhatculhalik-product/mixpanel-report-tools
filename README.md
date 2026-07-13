@@ -1,4 +1,4 @@
-# Mixpanel Table Transposer
+# Mixpanel Report Tools
 
 A tiny Chrome extension (Manifest V3) for **Mixpanel** dashboards. With a single
 click it:
@@ -54,12 +54,15 @@ with `…`.
 
 ## Installation (load unpacked)
 
-1. Clone or download this repository.
+1. Clone the repository (or download it as a ZIP and unzip):
+   ```bash
+   git clone https://github.com/serhatculhalik-product/mixpanel-report-tools.git
+   ```
 2. Open **`chrome://extensions`** in Chrome.
 3. Turn on **Developer mode** (top-right toggle).
 4. Click **Load unpacked** and select this project folder
    (the one containing `manifest.json`).
-5. The **Mixpanel Table Transposer** icon appears in your toolbar.
+5. The **Mixpanel Report Tools** icon appears in your toolbar.
 
 ## Usage
 

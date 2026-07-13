@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Mixpanel Table Transposer",
+  "name": "Mixpanel Report Tools",
   "version": "1.0.0",
   "description": "Transpose Mixpanel tables in one click (keeps the native look), copy as TSV, and show % change against a min/max baseline on metric cards.",
   "permissions": ["scripting", "activeTab"],
@@ -9,6 +9,6 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Transpose Mixpanel table"
+    "default_title": "Mixpanel Report Tools"
   }
 }
