@@ -36,27 +36,23 @@ button so you only flip the one you want.
 After transposing, the button becomes **`Copy TSV`**. One click copies the table
 as tab-separated values, ready to paste straight into **Google Sheets or Excel**.
 
-- **Full data, not just what's on screen.** `Copy TSV` gathers **every** row of
-  a long table before copying — even the ones you'd normally have to scroll to
-  reach — so you get the complete list.
-- **Spreadsheet-safe.** Cells that start with `=`, `+`, or `@` are automatically
-  escaped so Sheets/Excel don't misread them as broken formulas.
+It copies the **whole** table (every row) and escapes cells starting with `=`,
+`+`, or `@` so Sheets/Excel don't misread them as broken formulas.
 
 ### 3. `Change` column + sorting on `Value (Past)` tables
 When a table has a **`Value (Past)`** comparison column, it gets three extra
 buttons — **`% change(+)`**, **`% change(-)`**, and a standalone **`Copy TSV`** —
 plus the **`↺` Reset** icon.
 
-Pressing **`% change(+)`** or **`% change(-)`** does the heavy lifting in one go:
+Pressing **`% change(+)`** or **`% change(-)`** shows a complete table with a new
+**`Change`** column:
 
-- **Collects the whole list at once.** You don't have to scroll — it reads the
-  entire table in one pass and shows a **complete table** with every row.
 - **Adds a `Change` column** = `Value` − `Value (Past)` for each row, shown as a
   **bold highlight pill**: percentage-point delta for percentages (e.g.
   `-0.23pp`) or the raw net difference for plain numbers.
 - **Color follows the direction you care about.** `(+)` = up is good (increases
   green), `(-)` = down is good (decreases green). Switching between `(+)` and
-  `(-)` just recolors — it doesn't re-collect the data.
+  `(-)` just recolors.
 
 **Sort by change:** click the **`Change`** column header. Because all rows are
 already collected, sorting is instant — first click sorts **high → low**, click
@@ -111,16 +107,6 @@ also reverts it.)
 ### 8. Legend text wrapping
 Legend / segment labels that don't fit on one line **wrap** onto the next line
 instead of being cut off with `…`, so you can read full names.
-
-### 9. Auto-detects late-loading cards
-Once you activate the extension on a page, it keeps watching that page: tables
-and cards that finish loading **after** you clicked get their buttons
-automatically — no need to click the toolbar icon again. It's event-driven (no
-polling), so it stays idle until new content actually appears.
-
-### 10. Private by design
-Everything runs locally in your browser and only after you click the toolbar
-icon. No data is collected, stored, or sent to any server.
 
 ---
 
