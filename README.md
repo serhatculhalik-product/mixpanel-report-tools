@@ -40,13 +40,13 @@ Cards that show several big numbers get two buttons near the ellipsis menu:
 min/max — so every variant is compared against control. In that case the
 `(+)` / `(-)` buttons only decide which direction is shown as green.
 
-Each metric shows the relative change plus the raw difference, e.g.:
+The big value shows the relative `%` change; the note under it spells out
+`X compared to Y (raw difference)`, mimicking Mixpanel's native styling:
 
-- Percentages: `+0.66% ~+0.4pp` (relative % change and the percentage-point delta)
-- Everything else: `+7.92% ~+0.57` (relative % change and the net difference)
+- Percentages → `61.79% compared to 61.66% (+0.13pp)` (percentage-point delta)
+- Everything else → `8.11 compared to 7.78 (+0.33)` (net difference)
 
-A small note under each value spells out `X compared to Y`, mimicking Mixpanel's
-native styling. Click the active button again to revert.
+Click the active button again to revert.
 
 **Multi-row reports:** a card can contain several rows/segments (e.g. a 2×2
 grid). The whole `MultiMetricChart` is targeted and **all metrics in the card are

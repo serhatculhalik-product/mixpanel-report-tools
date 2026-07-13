@@ -446,11 +446,9 @@
       var change = base === 0 ? 0 : ((val - base) / Math.abs(base)) * 100;
       var isPct = /%/.test(el.getAttribute("data-mp-otext") || "");
       var extra = isPct ? fmtPP(val - base) : fmtDiff(val - base);
-      el.innerHTML =
-        escapeHtml(fmtPct(change)) +
-        ' <span style="font-size:0.5em;opacity:.85;font-weight:inherit;">~' +
-        escapeHtml(extra) +
-        "</span>";
+      // Big value shows only the % change; the raw difference goes in
+      // parentheses on the "X compared to Y" line below.
+      el.innerHTML = escapeHtml(fmtPct(change));
       el.style.color = colorFor(change, mode);
 
       var old = mt.container.querySelector("[data-mp-change-note]");
@@ -461,7 +459,11 @@
       note.style.cssText =
         "margin-top:4px;font:500 12px -apple-system,Segoe UI,Roboto,sans-serif;" +
         "color:#9aa0a6;text-align:center;";
-      note.innerHTML = chip(el.getAttribute("data-mp-otext")) + " compared to " + chip(baseText);
+      note.innerHTML =
+        chip(el.getAttribute("data-mp-otext")) +
+        " compared to " +
+        chip(baseText) +
+        ' <span style="opacity:.9;">(' + escapeHtml(extra) + ")</span>";
 
       var mainVal = mt.container.querySelector('[data-sentry-component="renderMainValue"]') || el.parentElement;
       if (mainVal && mainVal.parentNode) mainVal.parentNode.insertBefore(note, mainVal.nextSibling);
