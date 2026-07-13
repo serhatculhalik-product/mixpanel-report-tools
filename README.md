@@ -8,7 +8,8 @@ toolbar icon and it adds small action buttons to each report card so you can:
 - **Copy any table as TSV** to the clipboard (paste straight into Google
   Sheets / Excel).
 - **See a `% change` view on multi-metric cards** — compare every metric against
-  a single min or max baseline.
+  a baseline (the A/B **control** group when present, otherwise the min or max
+  value).
 
 No data leaves your browser. The extension only runs when you click its toolbar
 icon.
@@ -34,6 +35,11 @@ Cards that show several big numbers get two buttons near the ellipsis menu:
 - **`% change(-)`** — uses the **largest** value in the card as the baseline.
   Decreases are green (useful when *lower is better*).
 
+**Control-group baseline:** if any metric's label contains the word **`control`**
+(e.g. an A/B test's control segment), it is used as the baseline instead of the
+min/max — so every variant is compared against control. In that case the
+`(+)` / `(-)` buttons only decide which direction is shown as green.
+
 Each metric shows the relative change plus the raw difference, e.g.:
 
 - Percentages: `+0.66% ~+0.4pp` (relative % change and the percentage-point delta)
@@ -44,8 +50,8 @@ native styling. Click the active button again to revert.
 
 **Multi-row reports:** a card can contain several rows/segments (e.g. a 2×2
 grid). The whole `MultiMetricChart` is targeted and **all metrics in the card are
-compared as one group** — the baseline is the min (`+`) or max (`−`) of every
-value in the card, not per row.
+compared as one group** — the baseline is the `control` metric if one exists,
+otherwise the min (`+`) or max (`−`) of every value in the card, not per row.
 
 Legend text that doesn't fit on one line **wraps** instead of being truncated
 with `…`.
@@ -89,7 +95,7 @@ Then follow steps 4–7 above and select the cloned folder.
 3. Use the buttons that appear on each card:
    - **`⇄ Transpose`** → transpose the table, then **`Copy TSV`** to copy it.
    - **`% change(+)` / `% change(-)`** → show percentage change against the
-     min/max baseline.
+     baseline (the `control` group if present, otherwise min/max).
 
 > Tip: click the icon again after new tables/cards load — buttons are added only
 > to cards that don't already have them.

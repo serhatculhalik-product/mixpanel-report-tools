@@ -309,13 +309,25 @@
     }
   }
 
+  // Read a metric's legend/segment label (e.g. "Market_Search_LTR_V3 control").
+  function metricLabel(container) {
+    var seg = container.querySelector('[class*="_segment-text_"]');
+    if (seg) {
+      var t = (seg.textContent || "").trim();
+      if (t) return t;
+    }
+    var titled = container.querySelector("[title]");
+    if (titled) return (titled.getAttribute("title") || "").trim();
+    return "";
+  }
+
   function collectMetrics(scope) {
     var out = [];
     var ms = scope.querySelectorAll('[data-sentry-component="MetricChart"]');
     if (!ms.length) ms = scope.querySelectorAll('[class*="_metric-container_"]');
     for (var i = 0; i < ms.length; i++) {
       var v = ms[i].querySelector('[class*="_value_"]');
-      if (v) out.push({ container: ms[i], valueEl: v });
+      if (v) out.push({ container: ms[i], valueEl: v, label: metricLabel(ms[i]) });
     }
     return out;
   }
@@ -402,13 +414,25 @@
     }
     if (nums.length < 1) return;
 
-    var base = mode === "min" ? Math.min.apply(null, nums) : Math.max.apply(null, nums);
-
+    // Baseline: prefer a metric whose label contains "control" (e.g. the A/B
+    // control group). If there is none, fall back to the min ("+") or max ("-").
+    var base = null;
     var baseText = "";
-    for (var b = 0; b < chunk.length; b++) {
-      if (parseFloat(chunk[b].valueEl.getAttribute("data-mp-num")) === base) {
-        baseText = chunk[b].valueEl.getAttribute("data-mp-otext");
+    for (var c = 0; c < chunk.length; c++) {
+      var cn = parseFloat(chunk[c].valueEl.getAttribute("data-mp-num"));
+      if (isFinite(cn) && /control/i.test(chunk[c].label || "")) {
+        base = cn;
+        baseText = chunk[c].valueEl.getAttribute("data-mp-otext");
         break;
+      }
+    }
+    if (base === null) {
+      base = mode === "min" ? Math.min.apply(null, nums) : Math.max.apply(null, nums);
+      for (var b = 0; b < chunk.length; b++) {
+        if (parseFloat(chunk[b].valueEl.getAttribute("data-mp-num")) === base) {
+          baseText = chunk[b].valueEl.getAttribute("data-mp-otext");
+          break;
+        }
       }
     }
 
