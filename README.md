@@ -18,29 +18,24 @@ icon.
 
 ## Features
 
-### 1. Table transpose
-For every data table on the page, a small **`⇄ Transpose`** button is added next
-to the card's `...` (ellipsis) menu. If a card has no ellipsis menu, the button
-is placed just above the table instead.
+### 1. Transpose tables
+A small **`⇄ Transpose`** button is added to every data table, next to the
+card's `...` (ellipsis) menu — or just above the table if there's no menu.
+Clicking it flips that specific table (rows ↔ columns) **in place**, so the
+native styling (fonts, colors, lift pills) is preserved.
 
-- Click **`⇄ Transpose`** to flip that specific table (rows ↔ columns).
-- The button then turns into **`Copy TSV`** — click it to copy the table as
-  tab-separated values.
-- A **`↺` reset** icon appears next to it to restore the table's original view.
+### 2. Copy as TSV
+After transposing, the button turns into **`Copy TSV`**. One click copies the
+table as tab-separated values, ready to paste straight into Google Sheets or
+Excel.
 
-### 2. `% change` on metric cards
+### 3. `% change` baseline on metric cards
 Cards that show several big numbers get two buttons near the ellipsis menu:
 
-- **`% change(+)`** — uses the **smallest** value in the card as the baseline and
-  shows every other metric's change relative to it. Increases are green.
+- **`% change(+)`** — uses the **smallest** value in the card as the baseline
+  and shows every other metric's change relative to it. Increases are green.
 - **`% change(-)`** — uses the **largest** value in the card as the baseline.
   Decreases are green (useful when *lower is better*).
-- A **`↺` reset** icon next to them restores the card's original values.
-
-**Control-group baseline:** if any metric's label contains the word **`control`**
-(e.g. an A/B test's control segment), it is used as the baseline instead of the
-min/max — so every variant is compared against control. In that case the
-`(+)` / `(-)` buttons only decide which direction is shown as green.
 
 The big value shows the relative `%` change; the note under it reads
 `X compared to Y` followed by the raw difference as a **bold highlight pill**
@@ -49,30 +44,48 @@ The big value shows the relative `%` change; the note under it reads
 - Percentages → `61.79% compared to 61.66%` + `+0.13pp` (percentage-point delta)
 - Everything else → `8.11 compared to 7.78` + `+0.33` (net difference)
 
-Click the active button again to revert.
+### 4. Control-group baseline
+If any metric's label contains the word **`control`** (e.g. an A/B test's control
+segment), it is used as the baseline instead of the min/max — so every variant is
+compared against control. In that case the `(+)` / `(-)` buttons only decide
+which direction is shown as green.
 
-**Multi-row reports:** a card can contain several rows/segments (e.g. a 2×2
-grid). The whole `MultiMetricChart` is targeted and **all metrics in the card are
-compared as one group** — the baseline is the `control` metric if one exists,
-otherwise the min (`+`) or max (`−`) of every value in the card, not per row.
+### 5. Whole-card grouping (multi-row reports)
+A card can contain several rows/segments (e.g. a 2×2 grid). The whole
+`MultiMetricChart` is targeted and **all metrics in the card are compared as one
+group** — against the `control` metric if one exists, otherwise the min (`+`) or
+max (`−`) of every value in the card, not per row.
 
-### 3. Already-compared cards
-Some Mixpanel cards already come compared natively — the value is a `%` change
-with an "X compared to Y" note. The extension keeps Mixpanel's `%` value and
-still shows the **`% change(+)` / `% change(-)`** buttons. When you press one it:
+### 6. Already-compared cards
+Some Mixpanel cards already come compared natively (the value is a `%` change
+with an "X compared to Y" note). The extension keeps Mixpanel's `%` value, and
+when you press **`% change(+)` / `% change(-)`** it:
 
 - adds the raw difference as a **bold highlight pill on the "X compared to Y"
-  line** (the big `%` value is left as-is), green when positive and red when
-  negative — net difference for plain numbers (e.g. `8.11 compared to 7.78`
-  + `+0.33`) or the percentage-point delta for percentages (e.g.
-  `61.79% compared to 61.66%` + `+0.13pp`);
+  line** (the big `%` value is left as-is) — net difference for plain numbers
+  (e.g. `8.11 compared to 7.78` + `+0.33`) or the percentage-point delta for
+  percentages (e.g. `61.79% compared to 61.66%` + `+0.13pp`);
 - recolors each value so the direction you care about is green — `(+)` means an
   increase is good, `(-)` means a decrease is good.
 
-Press the active button again to restore Mixpanel's original value and color.
+### 7. Reset to original
+A **`↺` reset** icon sits next to the buttons on both tables and metric cards.
+Click it to return the table or card to its **original view**, as if no button
+had been pressed. (Clicking the active `% change` button again also reverts it.)
 
-Legend text that doesn't fit on one line **wraps** instead of being truncated
-with `…`.
+### 8. Legend text wrapping
+Legend/segment text that doesn't fit on one line **wraps** instead of being
+truncated with `…`.
+
+### 9. Auto-detect late-loading widgets
+Once activated on a page, the extension keeps watching it (light DOM and every
+shadow root): tables and cards that finish loading **after** you clicked get
+their buttons automatically — no matter how long you wait. It's event-driven
+(no polling), so it stays idle until new content actually appears.
+
+### 10. Local & private
+Everything runs in the page; **no data leaves your browser** and the extension
+only runs when you click its toolbar icon.
 
 ---
 
