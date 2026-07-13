@@ -133,14 +133,14 @@ Have an idea? See **Feedback & contributing** below — no coding required.
 ## Feedback & contributing
 
 This tool is built for **product managers and analysts**, so you don't need to
-write code to help improve it:
+write code to help improve it. All feedback happens in **GitHub Discussions**:
 
-- **Bug or feature request?** Open an issue on the
-  [Issues page](https://github.com/serhatculhalik-product/mixpanel-report-tools/issues):
-  click **New issue**, describe what you expected vs. what happened, and add a
-  screenshot if you can.
-- **Want a new Mixpanel report type supported?** Share a screenshot of the card
-  and the comparison you'd like to see.
+- **Have a question, idea, bug, or feature request?** Start a discussion on the
+  [Discussions page](https://github.com/serhatculhalik-product/mixpanel-report-tools/discussions):
+  click **New discussion**, pick a category, describe what you expected vs. what
+  happened, and add a screenshot if you can.
+- **Want a new Mixpanel report type supported?** Open a discussion with a
+  screenshot of the card and the comparison you'd like to see.
 - **Developers:** contributions are welcome — fork the repo, create a branch, and
   open a pull request.
 
