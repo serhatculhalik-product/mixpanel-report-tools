@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-14
+
 ### Added
 - **"A/B Cohorts" button on cohort tables** — a one-click button next to
   `⇄ Transpose` that checks every cohort row except those starting with `All` or
