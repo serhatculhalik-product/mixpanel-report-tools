@@ -147,6 +147,16 @@
     var btn = mkButton(doc, "\u21C4 Transpose");
     bar.appendChild(btn);
 
+    // Cohort tables (rows with checkboxes) get a one-click "select the real
+    // segments" button: everything except "All*" and "Not In*". Hidden until the
+    // table actually has cohort checkboxes (they can render a beat later).
+    var bSel = mkButton(doc, "\u2611 A/B Cohorts");
+    bSel.title =
+      "Select all cohorts except those starting with \u201cAll\u201d or \u201cNot In\u201d";
+    bSel.style.display = hasCohortCheckboxes(table) ? "" : "none";
+    bar.appendChild(bSel);
+    table.__mpSelBtn = bSel;
+
     // Tables with a "Value (Past)" column also get a per-row "Change" column.
     var vp = hasValuePast(table);
     var bPlus, bMinus, bCopy;
@@ -188,6 +198,16 @@
     }
 
     btn.onclick = doTranspose;
+
+    bSel.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var n = selectCohortVariants(table);
+      var prev = bSel.textContent;
+      bSel.textContent = n ? "Selected \u2713" : "No change";
+      setTimeout(function () { bSel.textContent = prev; }, 1400);
+      return false;
+    };
 
     if (vp) {
       bPlus.onclick = function (e) {
@@ -366,6 +386,111 @@
       if (/\(past\)/i.test((titles[i].textContent || ""))) return true;
     }
     return false;
+  }
+
+  // ----- Cohort selection: check every row except "All*" / "Not In*" -----
+
+  // Cohort rows we never want auto-selected: the "All User Profiles" total and
+  // any "Not In ..." inverse segment.
+  function isExcludedCohort(txt) {
+    return /^\s*(all|not\s+in)\b/i.test(txt || "");
+  }
+
+  // The toggle control inside a cell: a native checkbox, or a custom one
+  // (role="checkbox" / [aria-checked]). Returns null when the cell has none.
+  function cellCheckControl(cell) {
+    var input = cell.querySelector('input[type="checkbox"]');
+    if (input) return { el: input, native: true };
+    var role = cell.querySelector('[role="checkbox"], [aria-checked]');
+    if (role) return { el: role, native: false };
+    return null;
+  }
+
+  function ctrlChecked(ctrl) {
+    return ctrl.native
+      ? !!ctrl.el.checked
+      : (ctrl.el.getAttribute("aria-checked") || "").toLowerCase() === "true";
+  }
+
+  // Toggle a control the way a real user would. Native inputs flip on a plain
+  // .click(); Mixpanel's custom role="checkbox" component often only reacts to a
+  // full pointer/mouse sequence, so we dispatch that instead.
+  function toggleControl(ctrl) {
+    if (ctrl.native) { ctrl.el.click(); return; }
+    var el = ctrl.el;
+    var doc = el.ownerDocument;
+    var win = (doc && doc.defaultView) || window;
+    var types = ["pointerdown", "mousedown", "pointerup", "mouseup", "click"];
+    for (var i = 0; i < types.length; i++) {
+      var type = types[i];
+      var isPointer = type.indexOf("pointer") === 0;
+      var ev = null;
+      try {
+        var Ctor = isPointer && win.PointerEvent ? win.PointerEvent : win.MouseEvent;
+        ev = new Ctor(type, { bubbles: true, cancelable: true, view: win });
+      } catch (e) {
+        try { ev = doc.createEvent("MouseEvents"); ev.initEvent(type, true, true); }
+        catch (e2) { ev = null; }
+      }
+      if (ev) el.dispatchEvent(ev);
+    }
+  }
+
+  // The label for a cohort row: this cell's own text, or (if the checkbox sits in
+  // a cell of its own) the text of another cell on the same grid row.
+  function rowLabel(table, cell) {
+    var t = cellText(cell);
+    if (t) return t;
+    var rs = cell.style && cell.style.gridRowStart;
+    if (!rs) return "";
+    var cells = deepQueryAll(table, ".mp-table-cell", []);
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i] === cell) continue;
+      if ((cells[i].style && cells[i].style.gridRowStart) !== rs) continue;
+      var lt = cellText(cells[i]);
+      if (lt) return lt;
+    }
+    return "";
+  }
+
+  // Every selectable cohort row {ctrl, label}. Skips header/title cells (so the
+  // "select all" toggle is never touched) and rows with no readable label.
+  function cohortRows(table) {
+    var cells = deepQueryAll(table, ".mp-table-cell", []);
+    var rows = [];
+    var seen = [];
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      if (cell.classList && cell.classList.contains("title-cell")) continue; // header
+      if (cell.style && cell.style.gridRowStart === "1") continue; // header row
+      var ctrl = cellCheckControl(cell);
+      if (!ctrl) continue;
+      if (seen.indexOf(ctrl.el) !== -1) continue;
+      var label = rowLabel(table, cell);
+      if (!label) continue;
+      seen.push(ctrl.el);
+      rows.push({ ctrl: ctrl, label: label });
+    }
+    return rows;
+  }
+
+  function hasCohortCheckboxes(table) {
+    return cohortRows(table).length > 0;
+  }
+
+  // Select every cohort row except those starting with "All" or "Not In", and
+  // deselect those two kinds. Clicks the control (not just .checked=) so React's
+  // handlers run and Mixpanel updates the chart.
+  function selectCohortVariants(table) {
+    var rows = cohortRows(table);
+    var changed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var want = !isExcludedCohort(rows[i].label);
+      if (ctrlChecked(rows[i].ctrl) !== want) {
+        try { toggleControl(rows[i].ctrl); changed++; } catch (e) {}
+      }
+    }
+    return changed;
   }
 
   // Read the meaningful text of a table cell (header title / value), skipping
@@ -1382,6 +1507,12 @@
       tb.setAttribute("data-mp-ctrl", "1");
       addTableControl(tb);
       tAdded++;
+    }
+    // Reveal / hide the "A/B Cohorts" button as cohort checkboxes appear or
+    // go away (they can render after the table's own controls were added).
+    for (var tv = 0; tv < tables.length; tv++) {
+      var sb = tables[tv].__mpSelBtn;
+      if (sb) sb.style.display = hasCohortCheckboxes(tables[tv]) ? "" : "none";
     }
 
     // Metric cards: treat the whole MultiMetricChart as one group (it may span rows).

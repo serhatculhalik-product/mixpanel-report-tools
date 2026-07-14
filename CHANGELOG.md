@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **"A/B Cohorts" button on cohort tables** — a one-click button next to
+  `⇄ Transpose` that checks every cohort row except those starting with `All` or
+  `Not In` (and unchecks those two kinds), leaving just the real variants/segments.
+  It clicks the actual checkboxes so Mixpanel updates the chart. The button only
+  appears on tables that have cohort checkboxes.
+
 ## [1.2.0] - 2026-07-14
 
 ### Added

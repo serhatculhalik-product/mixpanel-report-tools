@@ -11,6 +11,8 @@ card so you can:
 - **See a `% change` view on multi-metric cards** — compare every metric against
   a baseline (the A/B **control** group when present, otherwise the min or max
   value).
+- **Select cohort segments in one click** — check every segment except the
+  `All …` total and `Not In …` inverse segments.
 
 No data leaves your browser. The extension only runs on Mixpanel pages.
 
@@ -124,6 +126,15 @@ also reverts it.)
 Legend / segment labels that don't fit on one line **wrap** onto the next line
 instead of being cut off with `…`, so you can read full names.
 
+### 9. Select A/B cohorts (skip `All` / `Not In`)
+Cohort tables (the ones with a checkbox next to each segment) get an
+**`☑ A/B Cohorts`** button next to `⇄ Transpose`. Clicking it **checks every
+cohort row except those starting with `All` or `Not In`** (e.g. `All User
+Profiles` and any `Not In …` inverse segment), and unchecks those two kinds — so
+you're left with just the real variants/segments in one click. It clicks the
+actual checkboxes, so Mixpanel updates the chart exactly as if you'd toggled them
+by hand. The button only appears on tables that have cohort checkboxes.
+
 ---
 
 ## Installation
@@ -178,6 +189,15 @@ The exact buttons depend on the card. Below is what to do for each type.
 
 > You don't have to transpose to copy — see below for tables that expose a
 > standalone `Copy TSV` button.
+
+### Select the real cohort segments (skip `All` / `Not In`)
+Use this on cohort tables where each segment has a checkbox.
+
+1. Click **`☑ A/B Cohorts`** (next to `⇄ Transpose`).
+2. Every cohort **except** those starting with `All` or `Not In` gets checked, and
+   those two kinds get unchecked — leaving just the real variants/segments.
+3. Mixpanel updates the chart as if you'd toggled the checkboxes yourself; adjust
+   any row by hand afterwards if you like.
 
 ### Add a `Change` column and sort it (`Value (Past)` tables)
 Use this when a table has a **`Value`** and a **`Value (Past)`** column and you
