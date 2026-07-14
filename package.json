@@ -1,10 +1,10 @@
 {
   "name": "mixpanel-tablo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A tiny Chrome extension (Manifest V3) that adds Transpose, % change, a sortable Change column, and Copy TSV to Mixpanel report cards.",
   "main": "background.js",
   "scripts": {
-    "test": "node test/sort.test.js && node test/sweep.test.js"
+    "test": "node test/sort.test.js && node test/sweep.test.js && node test/compare.test.js"
   },
   "repository": {
     "type": "git",

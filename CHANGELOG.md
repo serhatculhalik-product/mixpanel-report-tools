@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-07-14
 
 ### Added
 - **Sortable `Value` and `Value (Past)` columns** — in the computed `Change` view,
@@ -12,6 +12,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Change` (first click high→low, click again low→high; switching columns restarts
   at high→low). The active column shows a `↑`/`↓` arrow, others a neutral `↕`, and
   `Copy TSV` follows the active sort.
+- **Automatic direction on already-compared cards** — for multi-metric cards that
+  already have a native "X compared to Y" comparison, the absolute-difference pill
+  now appears **automatically** with the direction and color inferred from the color
+  Mixpanel already applied to the relative `%` change. The pill mirrors Mixpanel's
+  exact color, so the absolute and relative changes always agree, and users no
+  longer need to pick `↑` / `↓` manually.
+
+### Changed
+- On already-compared cards the extension no longer recolors Mixpanel's headline
+  `%`; it keeps Mixpanel's own color and matches the difference pill to it. The
+  `↑` / `↓` buttons remain a manual fallback where the direction can't be inferred,
+  and an explicit reset / toggle-off is respected (auto-apply won't re-trigger).
 
 ## [1.1.0] - 2026-07-13
 

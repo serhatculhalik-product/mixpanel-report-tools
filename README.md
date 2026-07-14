@@ -91,17 +91,28 @@ control segment), that metric is automatically used as the baseline instead of
 the min/max — so every variant is compared against control. The `(+)` / `(-)`
 buttons then only decide which direction is shown as green.
 
-### 6. Already-compared cards
+### 6. Already-compared cards (automatic direction)
 Some Mixpanel cards arrive already compared (the big value is itself a `%` change
-with an "X compared to Y" note). Here the extension **keeps Mixpanel's own `%`**
-and, when you press **`% change(+)` / `% change(-)`**, it:
+with an "X compared to Y" note, which Mixpanel already colors green/red by whether
+the move is good or bad). For these the extension works **automatically — no
+button press or direction choice needed**:
 
-- adds the raw difference as a **highlight pill on the "X compared to Y" line**
-  (leaving the headline `%` untouched) — net difference for numbers
+- it **infers whether higher or lower is better** from the color Mixpanel already
+  applied to the relative `%` change;
+- it adds the raw difference as a **highlight pill on the "X compared to Y" line**
+  (leaving Mixpanel's headline `%` untouched) — net difference for numbers
   (`8.11 compared to 7.78` **`+0.33`**) or the percentage-point delta for
   percentages (`61.79% compared to 61.66%` **`+0.13pp`**);
-- recolors each value for your chosen direction — `(+)` = up is good, `(-)` =
-  down is good.
+- it colors that pill to **exactly match Mixpanel's own color**, so the absolute
+  difference and the relative `%` change always agree.
+
+For example, on a card where **lower is better**, `7.58 compared to 7.67`
+(`-1.24%`, absolute `-0.09`) shows **green** (an improvement) and
+`7.96 compared to 7.67` (`+3.75%`, absolute `+0.29`) shows **red** — automatically.
+
+The `↑` / `↓` buttons remain as a **manual fallback** for cards where the direction
+can't be inferred (e.g. plain metric cards with no native comparison — see #4),
+and `↺` Reset removes the pills. Any direction you set manually is preserved.
 
 ### 7. Reset to original
 A **`↺` Reset** icon sits next to the buttons on both tables and metric cards.
@@ -198,9 +209,11 @@ Use this on cards that show several big numbers side by side.
 3. Special cases handled automatically:
    - **Control group:** if a metric is labelled **`control`**, it becomes the
      baseline; `(+)` / `(-)` then only flip which direction is green.
-   - **Already-compared cards:** Mixpanel's own headline `%` stays as-is;
-     pressing a button just adds the raw-difference pill on the comparison line
-     and recolors for your chosen direction.
+   - **Already-compared cards:** Mixpanel's own headline `%` stays as-is, and the
+     raw-difference pill is added **automatically** — no button needed. Its
+     direction and color are inferred from Mixpanel's own comparison coloring, so
+     the absolute and relative changes always match. The `↑` / `↓` buttons are
+     just a manual fallback for cards that can't be inferred.
 4. Click **`↺`** (or the active `% change` button again) to revert.
 
 ### Reset anything

@@ -923,6 +923,76 @@
     );
   }
 
+  // Parse a CSS color ("rgb(...)", "rgba(...)", "#rgb", "#rrggbb") to {r,g,b}.
+  function parseColor(str) {
+    if (!str) return null;
+    var m = ("" + str).match(/rgba?\(([^)]+)\)/i);
+    if (m) {
+      var p = m[1].split(",");
+      var r = parseFloat(p[0]), g = parseFloat(p[1]), b = parseFloat(p[2]);
+      if (isFinite(r) && isFinite(g) && isFinite(b)) {
+        return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+      }
+    }
+    var h6 = ("" + str).match(/^#?([0-9a-f]{6})$/i);
+    if (h6) {
+      var n = parseInt(h6[1], 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+    var h3 = ("" + str).match(/^#?([0-9a-f]{3})$/i);
+    if (h3) {
+      var s = h3[1];
+      return {
+        r: parseInt(s[0] + s[0], 16),
+        g: parseInt(s[1] + s[1], 16),
+        b: parseInt(s[2] + s[2], 16),
+      };
+    }
+    return null;
+  }
+
+  // Classify a color as favorable (green, +1), unfavorable (red, -1), or neutral
+  // (0). Used to read the directionality Mixpanel already baked into a value's
+  // color. Threshold keeps greys/whites (equal channels) neutral.
+  function favorFromColor(rgb) {
+    if (!rgb) return 0;
+    if (rgb.g - rgb.r > 20 && rgb.g - rgb.b > -10) return 1;
+    if (rgb.r - rgb.g > 20 && rgb.r - rgb.b > -10) return -1;
+    return 0;
+  }
+
+  // Read the meaningful (green/red) color of a value element. Mixpanel sometimes
+  // colors an inner span rather than the value node itself, so if the element's
+  // own computed color is neutral we scan descendants for the first favorable/
+  // unfavorable color.
+  function readValueColor(el, win) {
+    var c = "";
+    try { c = win.getComputedStyle(el).color; } catch (e) {}
+    if (favorFromColor(parseColor(c))) return c;
+    var kids = el.querySelectorAll ? el.querySelectorAll("*") : [];
+    for (var i = 0; i < kids.length; i++) {
+      var cc = "";
+      try { cc = win.getComputedStyle(kids[i]).color; } catch (e) {}
+      if (favorFromColor(parseColor(cc))) return cc;
+    }
+    return c;
+  }
+
+  // Difference pill colored to EXACTLY match a given CSS color (with a translucent
+  // background of the same hue). Used when we mirror Mixpanel's own value color.
+  function diffChipFromColor(text, cssColor) {
+    var rgb = parseColor(cssColor);
+    var bg = rgb
+      ? "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",.20)"
+      : "rgba(127,127,127,.18)";
+    return (
+      '<span data-mp-cmp-extra="1" style="margin-left:6px;padding:1px 6px;border-radius:3px;' +
+      "font-weight:700;font-variant-numeric:tabular-nums;background:" + bg + ";color:" +
+      (cssColor || "inherit") + ';">' +
+      escapeHtml(text) + "</span>"
+    );
+  }
+
   // Wrap legend/segment text to the next line instead of truncating it.
   function relaxWrap(el) {
     if (!el || !el.style) return;
@@ -1013,10 +1083,60 @@
       e.stopPropagation();
       revertMetrics(row);
       row.removeAttribute("data-mp-metric-mode");
+      // Don't let the automatic inference re-apply after an explicit reset.
+      row.setAttribute("data-mp-auto-done", "1");
       setActive(bPlus, bMinus, null);
       return false;
     };
+    // Keep the direction buttons reachable so the automatic pass can reflect the
+    // inferred direction in their active state.
+    row.__mpDirBtns = { plus: bPlus, minus: bMinus };
     return true;
+  }
+
+  // Infer whether higher or lower is better for a natively-compared card from the
+  // color Mixpanel already applied to its relative % change value. Returns "min"
+  // (up is good), "max" (down is good), or null when it can't be determined.
+  function inferModeFromCard(scope) {
+    var win = (scope.ownerDocument && scope.ownerDocument.defaultView) || window;
+    var metrics = collectMetrics(scope);
+    for (var i = 0; i < metrics.length; i++) {
+      var note = findComparisonNote(metrics[i].container);
+      if (!note) continue;
+      var favor = favorFromColor(parseColor(readValueColor(metrics[i].valueEl, win)));
+      if (!favor) continue; // this metric is neutral/uncolored; try the next one
+      var m = (note.textContent || "").match(
+        /([-\d.,]+\s*%?)\s*compared to\s*([-\d.,]+\s*%?)/i
+      );
+      if (!m) continue;
+      var a = parseNum(m[1]), b = parseNum(m[2]);
+      if (!isFinite(a) || !isFinite(b) || a === b) continue;
+      // The value moved up (a>b) or down; Mixpanel colored it good (favor>0) or
+      // bad. From that, "up is good" iff an up-move is the one colored good.
+      var upIsGood = a > b ? favor > 0 : favor < 0;
+      return upIsGood ? "min" : "max";
+    }
+    return null;
+  }
+
+  // For a controlled card that already has a native "compared to" comparison,
+  // show the absolute difference automatically using the inferred direction —
+  // once. Skips cards the user has already configured or reset, and cards where
+  // the direction can't be inferred (those keep the manual buttons).
+  function autoApplyDirection(row) {
+    if (row.getAttribute("data-mp-auto-done") === "1") return;
+    if (row.getAttribute("data-mp-metric-ctrl") !== "1") return;
+    if (row.getAttribute("data-mp-metric-mode")) {
+      row.setAttribute("data-mp-auto-done", "1"); // user already chose a direction
+      return;
+    }
+    if (!hasNativeComparison(row)) return; // no color to infer from -> manual only
+    var mode = inferModeFromCard(row);
+    if (!mode) return; // values may still be loading; retry on a later scan
+    renderCompared(row, mode);
+    row.setAttribute("data-mp-metric-mode", mode);
+    row.setAttribute("data-mp-auto-done", "1");
+    if (row.__mpDirBtns) setActive(row.__mpDirBtns.plus, row.__mpDirBtns.minus, mode);
   }
 
   function setActive(bPlus, bMinus, mode) {
@@ -1033,6 +1153,8 @@
     if (cur === mode) {
       revertMetrics(row);
       row.removeAttribute("data-mp-metric-mode");
+      // Turning it off is an explicit choice; don't let auto-apply bring it back.
+      row.setAttribute("data-mp-auto-done", "1");
       setActive(bPlus, bMinus, null);
       return;
     }
@@ -1148,12 +1270,14 @@
     for (var k = 0; k < own.length; k++) own[k].remove();
   }
 
-  // ---------- Already-compared cards: add the raw difference on demand ----------
+  // ---------- Already-compared cards: add the raw difference automatically ------
   // Some Mixpanel cards already come compared natively: the value is a % change
-  // and there is an "X compared to Y" note. For those we keep Mixpanel's % value
-  // and, when a % change button is pressed, just append the missing raw
-  // difference (net diff for plain numbers, or the percentage-point delta for
-  // percentages) and recolor per the chosen favorable direction.
+  // and there is an "X compared to Y" note, which Mixpanel colors green/red by
+  // whether the move is good or bad. For those we keep Mixpanel's % value and just
+  // append the missing raw difference (net diff for plain numbers, or the
+  // percentage-point delta for percentages), colored to EXACTLY match the color
+  // Mixpanel already applied to the relative % change — so the absolute and
+  // relative changes always agree without the user picking a direction.
 
   // Find the tightest element whose text reads "... compared to ..." (native,
   // i.e. not one of our own [data-mp-change-note] notes).
@@ -1182,6 +1306,7 @@
   }
 
   function renderCompared(scope, mode) {
+    var win = (scope.ownerDocument && scope.ownerDocument.defaultView) || window;
     var metrics = collectMetrics(scope);
     for (var i = 0; i < metrics.length; i++) {
       var mt = metrics[i];
@@ -1202,21 +1327,19 @@
       if (!isFinite(a) || !isFinite(b)) continue;
       var isPct = /%/.test(m[1]) || /%/.test(m[2]);
       var diff = a - b;
+      var text = isPct ? fmtPP(diff) : fmtDiff(diff);
 
-      // Recolor Mixpanel's own value per the chosen favorable direction; keep
-      // the value text itself untouched (remember original color for revert).
-      if (!el.hasAttribute("data-mp-ocolor")) {
-        el.setAttribute("data-mp-ocolor", el.style.color || "");
-      }
-      var change =
-        b === 0 ? (diff === 0 ? 0 : diff > 0 ? 100 : -100) : (diff / Math.abs(b)) * 100;
-      el.style.color = colorFor(change, mode);
+      // Prefer the directionality Mixpanel already baked into the relative %
+      // change color: mirror that exact color onto the absolute-difference pill,
+      // so both always agree with no manual up/down selection. Fall back to the
+      // chosen favorable direction only when Mixpanel left the value uncolored
+      // (e.g. a zero/no-change metric, or an unrecognizable theme color).
+      var valColor = readValueColor(el, win);
+      var favor = diff === 0 ? 0 : favorFromColor(parseColor(valColor));
 
-      // Add the raw difference as a colored highlight on the compared-to line,
-      // colored to match the headline value (favorable direction = green).
       note.insertAdjacentHTML(
         "beforeend",
-        diffChipHTML(isPct ? fmtPP(diff) : fmtDiff(diff), diff, mode)
+        favor ? diffChipFromColor(text, valColor) : diffChipHTML(text, diff, mode)
       );
     }
   }
@@ -1270,6 +1393,9 @@
     var mAdded = 0;
     for (var r = 0; r < metricRoots.length; r++) {
       if (addMetricControl(metricRoots[r])) mAdded++;
+      // Natively-compared cards get the absolute difference automatically, with
+      // the direction/color inferred from Mixpanel's own comparison coloring.
+      autoApplyDirection(metricRoots[r]);
     }
 
     // Wrap legend text (drop to the next line instead of truncating)
