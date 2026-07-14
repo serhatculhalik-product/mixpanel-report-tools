@@ -157,6 +157,14 @@
     bar.appendChild(bSel);
     table.__mpSelBtn = bSel;
 
+    // Grouped cohort tables repeat the metric name in a redundant "Metric"
+    // column; offer a toggle to collapse it. Hidden unless such a column exists.
+    var bMetric = mkButton(doc, "\u2716 Hide Metric");
+    bMetric.title = "Hide the redundant \u201cMetric\u201d column";
+    bMetric.style.display = findMetricColumn(table) ? "" : "none";
+    bar.appendChild(bMetric);
+    table.__mpMetricBtn = bMetric;
+
     // Tables with a "Value (Past)" column also get a per-row "Change" column.
     var vp = hasValuePast(table);
     var bPlus, bMinus, bCopy;
@@ -206,6 +214,16 @@
       var prev = bSel.textContent;
       bSel.textContent = n ? "Selected \u2713" : "No change";
       setTimeout(function () { bSel.textContent = prev; }, 1400);
+      return false;
+    };
+
+    bMetric.onclick = function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setMetricColumnHidden(table, !isMetricColumnHidden(table));
+      bMetric.textContent = isMetricColumnHidden(table)
+        ? "\u2716 Show Metric"
+        : "\u2716 Hide Metric";
       return false;
     };
 
@@ -491,6 +509,102 @@
       }
     }
     return changed;
+  }
+
+  // ----- Hide the redundant "Metric" column -----
+  //
+  // Grouped cohort tables repeat the same metric name in a "Metric" column on
+  // every row. This locates that column (by header text) so it can be collapsed.
+  // Returns { fixed, col } (col = the 1-based grid column as a string) or null.
+  function findMetricColumn(table) {
+    var fx = table.querySelector(":scope > .fixed-columns");
+    if (!fx) return null;
+    var titles = fx.querySelectorAll(":scope > .mp-table-cell.title-cell");
+    if (titles.length < 2) return null; // need another fixed column to keep
+    for (var i = 0; i < titles.length; i++) {
+      if (/^metric$/i.test(cellText(titles[i]))) {
+        var col = titles[i].style && titles[i].style.gridColumnStart;
+        if (col) return { fixed: fx, col: col };
+      }
+    }
+    return null;
+  }
+
+  // Space-separated CSS length list helpers (e.g. "460px 460px").
+  function tokenAt(v, idx) {
+    var p = ("" + (v || "")).trim().split(/\s+/);
+    return p[idx];
+  }
+  function setTokenAt(v, idx, repl) {
+    var p = ("" + (v || "")).trim().split(/\s+/);
+    if (idx >= 0 && idx < p.length) p[idx] = repl;
+    return p.join(" ");
+  }
+  // Subtract `amount` px from the token at `idx` of a CSS var on `el`.
+  function shrinkVarToken(el, name, idx, amount) {
+    var v = el.style.getPropertyValue(name);
+    var t = tokenAt(v, idx);
+    var n = parseFloat(t);
+    if (!isFinite(n)) return;
+    el.style.setProperty(name, setTokenAt(v, idx, Math.max(0, n - amount) + "px"));
+  }
+
+  function isMetricColumnHidden(table) {
+    return table.getAttribute("data-mp-metric-col-hidden") === "1";
+  }
+
+  // Collapse (hide) or restore the "Metric" column. Snapshots the table's and
+  // fixed-columns' inline styles + the hidden cells so it fully reverses.
+  function setMetricColumnHidden(table, hide) {
+    var info = findMetricColumn(table);
+    if (!info) return false;
+    var fx = info.fixed, col = info.col;
+    var idx = Math.max(0, (parseInt(col, 10) || 1) - 1);
+
+    if (hide) {
+      if (isMetricColumnHidden(table)) return true;
+      var snap = {
+        tableStyle: table.getAttribute("style") || "",
+        fixedStyle: fx.getAttribute("style") || "",
+        hidden: [],
+      };
+      var metricW = parseFloat(tokenAt(fx.style.getPropertyValue("--fixed-column-widths"), idx));
+      if (!isFinite(metricW)) metricW = 0;
+
+      var kids = fx.children;
+      for (var i = 0; i < kids.length; i++) {
+        var k = kids[i];
+        if (k.style && k.style.gridColumnStart === col) {
+          snap.hidden.push(k);
+          k.style.display = "none";
+        }
+      }
+      // Collapse the metric track and shrink the totals that position the
+      // scrollable columns, so no empty gap is left behind.
+      fx.style.setProperty(
+        "--fixed-column-widths",
+        setTokenAt(fx.style.getPropertyValue("--fixed-column-widths"), idx, "0px")
+      );
+      shrinkVarToken(table, "--fixed-columns-width", 0, metricW);
+      shrinkVarToken(table, "--data-table-columns", 0, metricW);
+      shrinkVarToken(table, "--table-width", 0, metricW);
+
+      table.__mpMetricSnap = snap;
+      table.setAttribute("data-mp-metric-col-hidden", "1");
+    } else {
+      if (!isMetricColumnHidden(table)) return true;
+      var s = table.__mpMetricSnap;
+      if (s) {
+        if (s.tableStyle) table.setAttribute("style", s.tableStyle);
+        else table.removeAttribute("style");
+        if (s.fixedStyle) fx.setAttribute("style", s.fixedStyle);
+        else fx.removeAttribute("style");
+        for (var j = 0; j < s.hidden.length; j++) s.hidden[j].style.display = "";
+      }
+      table.__mpMetricSnap = null;
+      table.removeAttribute("data-mp-metric-col-hidden");
+    }
+    return true;
   }
 
   // Read the meaningful text of a table cell (header title / value), skipping
@@ -1508,11 +1622,15 @@
       addTableControl(tb);
       tAdded++;
     }
-    // Reveal / hide the "A/B Cohorts" button as cohort checkboxes appear or
-    // go away (they can render after the table's own controls were added).
+    // Reveal / hide the cohort buttons as their columns appear or go away (they
+    // can render a beat after the table's own controls were added).
     for (var tv = 0; tv < tables.length; tv++) {
       var sb = tables[tv].__mpSelBtn;
       if (sb) sb.style.display = hasCohortCheckboxes(tables[tv]) ? "" : "none";
+      var mb = tables[tv].__mpMetricBtn;
+      if (mb && !isMetricColumnHidden(tables[tv])) {
+        mb.style.display = findMetricColumn(tables[tv]) ? "" : "none";
+      }
     }
 
     // Metric cards: treat the whole MultiMetricChart as one group (it may span rows).

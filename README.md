@@ -13,6 +13,7 @@ card so you can:
   value).
 - **Select cohort segments in one click** — check every segment except the
   `All …` total and `Not In …` inverse segments.
+- **Hide the redundant `Metric` column** on grouped cohort tables.
 
 No data leaves your browser. The extension only runs on Mixpanel pages.
 
@@ -135,6 +136,12 @@ you're left with just the real variants/segments in one click. It clicks the
 actual checkboxes, so Mixpanel updates the chart exactly as if you'd toggled them
 by hand. The button only appears on tables that have cohort checkboxes.
 
+### 10. Hide the redundant `Metric` column
+Grouped cohort tables repeat the same metric name in a **`Metric`** column on
+every row, wasting horizontal space. A **`✖ Hide Metric`** button (next to
+`⇄ Transpose`) collapses that column; click again (**`Show Metric`**) to bring it
+back. It only appears on tables that actually have a `Metric` column.
+
 ---
 
 ## Installation
@@ -198,6 +205,12 @@ Use this on cohort tables where each segment has a checkbox.
    those two kinds get unchecked — leaving just the real variants/segments.
 3. Mixpanel updates the chart as if you'd toggled the checkboxes yourself; adjust
    any row by hand afterwards if you like.
+
+### Hide the repeated `Metric` column
+On grouped cohort tables where every row repeats the same metric name:
+
+1. Click **`✖ Hide Metric`** (next to `⇄ Transpose`) to collapse the column.
+2. Click **`Show Metric`** to bring it back.
 
 ### Add a `Change` column and sort it (`Value (Past)` tables)
 Use this when a table has a **`Value`** and a **`Value (Past)`** column and you

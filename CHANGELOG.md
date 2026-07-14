@@ -12,6 +12,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Not In` (and unchecks those two kinds), leaving just the real variants/segments.
   It clicks the actual checkboxes so Mixpanel updates the chart. The button only
   appears on tables that have cohort checkboxes.
+- **"Hide Metric" button** — collapses the redundant `Metric` column that grouped
+  cohort tables repeat on every row (toggle back with `Show Metric`). Only shown
+  on tables that have a `Metric` column.
 
 ## [1.2.0] - 2026-07-14
 
