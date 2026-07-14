@@ -115,22 +115,33 @@ instead of being cut off with `…`, so you can read full names.
 
 ## Installation
 
-You **don't need to be a developer** to install this — just download and load it.
+You **don't need to be a developer** — just download the latest release and load
+it into Chrome. Takes about 2 minutes.
 
-1. Open the repo page:
-   [github.com/serhatculhalik-product/mixpanel-report-tools](https://github.com/serhatculhalik-product/mixpanel-report-tools)
-2. Click the green **`Code`** button → **`Download ZIP`**.
-3. **Unzip** the downloaded file. You'll get a folder like
-   `mixpanel-report-tools-main`.
-4. In Chrome, go to **`chrome://extensions`** (copy-paste it into the address bar).
+1. Go to the **[latest release](https://github.com/serhatculhalik-product/mixpanel-report-tools/releases/latest)**.
+2. Under **Assets**, click the **`mixpanel-report-tools-vX.Y.Z.zip`** file to
+   download it. *(Use this ZIP, not the "Source code" links.)*
+3. **Unzip** the downloaded file. You'll get a folder containing a
+   `manifest.json` file.
+4. In Chrome, open **`chrome://extensions`** (copy-paste it into the address bar).
 5. Turn on **Developer mode** (toggle in the top-right corner).
-6. Click **`Load unpacked`** and select the unzipped folder (the one that
-   contains the `manifest.json` file).
-7. The **Mixpanel Report Tools** icon appears in your toolbar — click the puzzle
-   piece and pin it for quick access.
+6. Click **`Load unpacked`** and select the **unzipped folder** (the one that
+   contains `manifest.json`).
+7. Done — the **Mixpanel Report Tools** icon appears in your toolbar. Click the
+   puzzle-piece icon and pin it if you'd like quick access. There's nothing to
+   click on Mixpanel pages; the tools appear automatically.
 
-> Keep the unzipped folder on your computer. If you delete or move it, Chrome
+> **Keep the unzipped folder** on your computer. If you delete or move it, Chrome
 > disables the extension.
+
+### Updating to a new version
+1. Download and unzip the newer release (steps 1–3 above), replacing the old
+   folder.
+2. On **`chrome://extensions`**, click the **↻ reload** icon on the Mixpanel
+   Report Tools card (or remove it and **Load unpacked** the new folder).
+
+> **Get notified of new versions:** on the repo page click **Watch → Custom →
+> Releases** to receive an email when a new version ships.
 
 ## Usage
 
