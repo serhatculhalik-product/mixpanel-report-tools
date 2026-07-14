@@ -41,10 +41,13 @@ It copies the **whole** table (every row) and escapes cells starting with `=`,
 
 ### 3. `Change` column + sorting on `Value (Past)` tables
 When a table has a **`Value (Past)`** comparison column, it gets three extra
-buttons — **`% change(+)`**, **`% change(-)`**, and a standalone **`Copy TSV`** —
-plus the **`↺` Reset** icon.
+buttons — **`↑`**, **`↓`**, and a standalone **`Copy TSV`** —
+plus the **`↺` Reset** icon. (**`↑`** and **`↓`** are the compact `% change`
+icons — they set which direction counts as good, for **both** percentages and
+plain numbers: `↑` = higher is better, `↓` = lower is better. Hover for a
+tooltip.)
 
-Pressing **`% change(+)`** or **`% change(-)`** shows a complete table with a new
+Pressing **`↑`** or **`↓`** shows a complete table with a new
 **`Change`** column:
 
 - **Adds a `Change` column** = `Value` − `Value (Past)` for each row, shown as a
@@ -68,9 +71,9 @@ Cards that show several big numbers (KPI tiles, A/B variants, segment
 breakdowns) get two buttons near the ellipsis menu that compare **all** metrics
 in the card against a single baseline:
 
-- **`% change(+)`** — uses the **smallest** value in the card as the baseline;
+- **`↑`** — uses the **smallest** value in the card as the baseline;
   every other metric's change is shown relative to it, with increases in green.
-- **`% change(-)`** — uses the **largest** value as the baseline, with decreases
+- **`↓`** — uses the **largest** value as the baseline, with decreases
   in green (useful when *lower is better*, e.g. cost or drop-off).
 
 Each metric keeps its number and adds a Mixpanel-style comparison underneath: the
@@ -157,7 +160,7 @@ The exact buttons depend on the card. Below is what to do for each type.
 Use this when a table has a **`Value`** and a **`Value (Past)`** column and you
 want the per-row difference.
 
-1. Click **`% change(+)`** (up is good) or **`% change(-)`** (down is good). The
+1. Click **`↑`** (up is good) or **`↓`** (down is good). The
    extension collects **every** row in one pass and shows a full, static table
    with a new **`Change`** column (the difference per row, color-coded).
    - The pressed button briefly shows **`Collecting…`** while it gathers a large
@@ -173,8 +176,8 @@ want the per-row difference.
 ### Compare metrics on a multi-metric card (`% change`)
 Use this on cards that show several big numbers side by side.
 
-1. Click **`% change(+)`** to compare every metric against the **smallest** value
-   (increases green), or **`% change(-)`** to compare against the **largest**
+1. Click **`↑`** to compare every metric against the **smallest** value
+   (increases green), or **`↓`** to compare against the **largest**
    value (decreases green).
 2. Read each metric's relative `%` change and the `X compared to Y` note, which
    ends in the raw difference as a colored pill — `+0.33` for numbers,

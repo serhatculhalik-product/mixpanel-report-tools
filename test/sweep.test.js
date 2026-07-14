@@ -142,8 +142,8 @@ function labels() {
   assert(!!table, "virtualized table scanned");
   assert(scroll.querySelectorAll(".body-cell").length < N * 2, "only a window of rows is in the DOM initially");
 
-  const plus = byText("button", "% change(+)")[0];
-  assert(!!plus, "% change(+) present");
+  const plus = byText("button", "\u2191")[0];
+  assert(!!plus, "% change(+) icon button present");
   plus.click();
   await wait(2500); // allow the sweep to walk the whole list
 

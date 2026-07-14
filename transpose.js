@@ -151,8 +151,8 @@
     var vp = hasValuePast(table);
     var bPlus, bMinus, bCopy;
     if (vp) {
-      bPlus = mkButton(doc, "% change(+)");
-      bMinus = mkButton(doc, "% change(-)");
+      bPlus = mkIconButton(doc, "\u2191", "% change \u00b7 higher is better (increases shown green)");
+      bMinus = mkIconButton(doc, "\u2193", "% change \u00b7 lower is better (decreases shown green)");
       bCopy = mkButton(doc, "Copy TSV");
       bar.appendChild(bPlus);
       bar.appendChild(bMinus);
@@ -932,8 +932,8 @@
 
     var bar = doc.createElement("div");
     bar.style.cssText = "display:inline-flex;gap:6px;align-items:center;";
-    var bPlus = mkButton(doc, "% change(+)");
-    var bMinus = mkButton(doc, "% change(-)");
+    var bPlus = mkIconButton(doc, "\u2191", "% change \u00b7 higher is better (increases shown green)");
+    var bMinus = mkIconButton(doc, "\u2193", "% change \u00b7 lower is better (decreases shown green)");
     var bReset = mkIconButton(doc, "\u21BA", "Reset to original");
     bar.appendChild(bPlus);
     bar.appendChild(bMinus);

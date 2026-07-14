@@ -103,9 +103,9 @@ function labels() {
   const table = doc.querySelector(".mp-data-table");
   assert(!!table, "table found and scanned");
 
-  const plus = byText("button", "% change(+)")[0];
-  const minus = byText("button", "% change(-)")[0];
-  assert(!!plus && !!minus, "% change buttons present");
+  const plus = byText("button", "\u2191")[0];
+  const minus = byText("button", "\u2193")[0];
+  assert(!!plus && !!minus, "% change icon buttons present");
 
   // 1) % change(+) collects the WHOLE list at once and shows the full static
   //    view in original order (no scroll dependency).

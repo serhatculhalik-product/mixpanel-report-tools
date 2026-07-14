@@ -16,6 +16,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   follows the sort order.
 
 ### Changed
+- **Compact `% change` buttons** — the `% change(+)` / `% change(-)` text buttons
+  are now small `↑` / `↓` icon buttons that set which direction counts as good
+  (higher vs lower is better) for both percentages and plain numbers; hover for a
+  tooltip.
 - **Full-table Copy TSV** — copying gathers every row of long (virtualized) tables,
   not just the ones currently on screen, and escapes cells starting with `= + @`.
 - Replaced the fragile scroll-time Change-column syncing with a single upfront
