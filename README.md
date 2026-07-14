@@ -127,9 +127,8 @@ it into Chrome. Takes about 2 minutes.
 5. Turn on **Developer mode** (toggle in the top-right corner).
 6. Click **`Load unpacked`** and select the **unzipped folder** (the one that
    contains `manifest.json`).
-7. Done — the **Mixpanel Report Tools** icon appears in your toolbar. Click the
-   puzzle-piece icon and pin it if you'd like quick access. There's nothing to
-   click on Mixpanel pages; the tools appear automatically.
+7. Done — open any Mixpanel report and the tools appear automatically. There's
+   nothing to click; you don't even need to pin the extension.
 
 > **Keep the unzipped folder** on your computer. If you delete or move it, Chrome
 > disables the extension.
