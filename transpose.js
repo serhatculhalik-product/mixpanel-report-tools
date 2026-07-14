@@ -465,15 +465,25 @@
     return { num: d, text: isFinite(d) ? (isPct ? fmtPP(d) : fmtDiff(d)) : "" };
   }
 
-  // Data row keys (>=2) optionally sorted by change; header (1) handled separately.
-  function orderedRowKeys(cache, curC, pastC, sortDir) {
+  // Sortable value for a data row on the active sort column. `sortCol` is either
+  // "change" (current - past) or a numeric grid-column index (that column's value).
+  function rowSortNum(row, curC, pastC, sortCol) {
+    if (sortCol == null || sortCol === "change") return rowChange(row, curC, pastC).num;
+    return parseNum(row[+sortCol]);
+  }
+
+  // Data row keys (>=2) optionally sorted by the active column; header (1)
+  // handled separately. `sortCol` selects which column to sort by ("change" or a
+  // numeric column index); defaults to "change".
+  function orderedRowKeys(cache, curC, pastC, sortDir, sortCol) {
     var keys = Object.keys(cache.rows).map(Number).filter(function (k) { return k >= 2; });
-    if (!sortDir || curC == null || pastC == null) {
+    var byChange = sortCol == null || sortCol === "change";
+    if (!sortDir || (byChange && (curC == null || pastC == null))) {
       return keys.sort(function (x, y) { return x - y; });
     }
     keys.sort(function (x, y) {
-      var a = rowChange(cache.rows[x], curC, pastC).num;
-      var b = rowChange(cache.rows[y], curC, pastC).num;
+      var a = rowSortNum(cache.rows[x], curC, pastC, sortCol);
+      var b = rowSortNum(cache.rows[y], curC, pastC, sortCol);
       var af = isFinite(a), bf = isFinite(b);
       if (!af && !bf) return x - y;
       if (!af) return 1;
@@ -483,12 +493,12 @@
     return keys;
   }
 
-  function tsvFromCache(table, cache, sortDir) {
+  function tsvFromCache(table, cache, sortDir, sortCol) {
     var cols = cache.cols;
     var mode = table.getAttribute("data-mp-vp-mode");
     var vp = valuePastCols(cache);
     var addChange = mode && vp.pastC != null && vp.curC != null;
-    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir);
+    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir, sortCol);
 
     var lines = [];
     // Header first.
@@ -603,14 +613,32 @@
     // If the computed view is open we already have the full dataset cached, so
     // copy straight from it (in the current sort order) — no re-sweep needed.
     if (table.__mpSortCache) {
-      copyTSV(doc, tsvFromCache(table, table.__mpSortCache, table.getAttribute("data-mp-vp-sort")), btn);
+      copyTSV(
+        doc,
+        tsvFromCache(
+          table,
+          table.__mpSortCache,
+          table.getAttribute("data-mp-vp-sort"),
+          table.getAttribute("data-mp-vp-sortcol")
+        ),
+        btn
+      );
       return;
     }
     var label = btn.textContent;
     btn.textContent = "Copying\u2026";
     sweepCollect(table).then(function (cache) {
       btn.textContent = label;
-      copyTSV(doc, tsvFromCache(table, cache, table.getAttribute("data-mp-vp-sort")), btn);
+      copyTSV(
+        doc,
+        tsvFromCache(
+          table,
+          cache,
+          table.getAttribute("data-mp-vp-sort"),
+          table.getAttribute("data-mp-vp-sortcol")
+        ),
+        btn
+      );
     });
   }
 
@@ -651,7 +679,8 @@
       if (!cache.cols || !cache.rows[1]) return;
       table.__mpSortCache = cache;
       table.setAttribute("data-mp-vp-mode", mode);
-      table.removeAttribute("data-mp-vp-sort"); // original order until the header is clicked
+      table.removeAttribute("data-mp-vp-sort"); // original order until a header is clicked
+      table.removeAttribute("data-mp-vp-sortcol");
       renderComputedView(table);
       setActive(bPlus, bMinus, mode);
     });
@@ -666,12 +695,21 @@
     return function () { btn.textContent = prev; };
   }
 
-  // Clicking the Change header sorts the cached dataset: first high->low, then
-  // low->high. No re-sweep — everything is already collected.
-  function toggleSort(table) {
+  // Clicking a sortable header (Change / Value / Value (Past)) sorts the cached
+  // dataset by that column. Clicking a new column starts high->low; clicking the
+  // active column again flips to low->high, then back. No re-sweep — everything
+  // is already collected.
+  function toggleSort(table, sortCol) {
     if (!table.__mpSortCache) return;
+    sortCol = sortCol || "change";
+    var curCol = table.getAttribute("data-mp-vp-sortcol") || "change";
     var cur = table.getAttribute("data-mp-vp-sort");
-    table.setAttribute("data-mp-vp-sort", cur === "desc" ? "asc" : "desc");
+    if (curCol !== sortCol || !cur) {
+      table.setAttribute("data-mp-vp-sort", "desc");
+    } else {
+      table.setAttribute("data-mp-vp-sort", cur === "desc" ? "asc" : "desc");
+    }
+    table.setAttribute("data-mp-vp-sortcol", sortCol);
     renderComputedView(table);
   }
 
@@ -684,7 +722,8 @@
       table,
       cache,
       table.getAttribute("data-mp-vp-mode") || "min",
-      table.getAttribute("data-mp-vp-sort") || null
+      table.getAttribute("data-mp-vp-sort") || null,
+      table.getAttribute("data-mp-vp-sortcol") || "change"
     );
     if (!node) return;
     if (table.__mpSortedView && table.__mpSortedView.parentNode) table.__mpSortedView.remove();
@@ -708,17 +747,29 @@
     }
     table.removeAttribute("data-mp-vp-mode");
     table.removeAttribute("data-mp-vp-sort");
+    table.removeAttribute("data-mp-vp-sortcol");
     table.removeAttribute("data-mp-vp-sorting");
   }
 
+  // Arrow suffix for a sortable header: the active column shows its direction
+  // (↑/↓), the rest show a neutral ↕ hint.
+  function sortArrow(colId, sortCol, sortDir) {
+    if (sortDir && colId === (sortCol || "change")) {
+      return sortDir === "asc" ? " \u2191" : " \u2193";
+    }
+    return " \u2195";
+  }
+
   // A clean, dark, static table built from the collected cache. `sortDir` null =
-  // original row order; "desc"/"asc" = sorted by change.
-  function buildComputedTable(table, cache, mode, sortDir) {
+  // original row order; "desc"/"asc" = sorted by `sortCol` ("change" or a numeric
+  // column index for Value / Value (Past)).
+  function buildComputedTable(table, cache, mode, sortDir, sortCol) {
     var doc = table.ownerDocument;
     var cols = cache.cols;
     if (!cols || !cache.rows[1]) return null;
+    sortCol = sortCol || "change";
     var vp = valuePastCols(cache);
-    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir);
+    var dataKeys = orderedRowKeys(cache, vp.curC, vp.pastC, sortDir, sortCol);
 
     var wrap = doc.createElement("div");
     wrap.setAttribute("data-mp-computed-view", "1");
@@ -729,7 +780,6 @@
     var tbl = doc.createElement("table");
     tbl.style.cssText = "border-collapse:collapse;width:100%;color:inherit;";
 
-    var arrow = sortDir === "asc" ? " \u2191" : sortDir === "desc" ? " \u2193" : " \u2195";
     var thead = doc.createElement("thead");
     var htr = doc.createElement("tr");
     function th(label, clickable, alignRight) {
@@ -742,18 +792,30 @@
         (clickable ? "cursor:pointer;user-select:none;" : "");
       return c;
     }
+    // Bind a header cell to sort by `colId` (a numeric column index or "change").
+    function makeSortable(cell, colId) {
+      cell.title = "Sort by this column (click to flip direction)";
+      cell.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSort(table, colId);
+        return false;
+      };
+    }
     for (var c = 1; c <= cols; c++) {
       var isNumCol = c === vp.curC || c === vp.pastC;
-      htr.appendChild(th(cache.rows[1][c] != null ? cache.rows[1][c] : "", false, isNumCol));
+      var baseLabel = cache.rows[1][c] != null ? cache.rows[1][c] : "";
+      if (isNumCol) {
+        // Value / Value (Past) columns are sortable, just like Change.
+        var vth = th(baseLabel + sortArrow(String(c), sortCol, sortDir), true, true);
+        makeSortable(vth, String(c));
+        htr.appendChild(vth);
+      } else {
+        htr.appendChild(th(baseLabel, false, false));
+      }
     }
-    var changeTh = th("Change" + arrow, true, true);
-    changeTh.title = "Sort by change (click to flip direction)";
-    changeTh.onclick = function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleSort(table);
-      return false;
-    };
+    var changeTh = th("Change" + sortArrow("change", sortCol, sortDir), true, true);
+    makeSortable(changeTh, "change");
     htr.appendChild(changeTh);
     thead.appendChild(htr);
     tbl.appendChild(thead);

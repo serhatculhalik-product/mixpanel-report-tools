@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Sortable `Value` and `Value (Past)` columns** — in the computed `Change` view,
+  the `Value` and `Value (Past)` column headers are now clickable and sort just like
+  `Change` (first click high→low, click again low→high; switching columns restarts
+  at high→low). The active column shows a `↑`/`↓` arrow, others a neutral `↕`, and
+  `Copy TSV` follows the active sort.
+
 ## [1.1.0] - 2026-07-13
 
 ### Added

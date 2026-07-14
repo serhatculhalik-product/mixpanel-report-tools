@@ -166,6 +166,38 @@ function labels() {
   assert(!table.getAttribute("data-mp-vp-sort"), "reset clears sort");
   assert(doc.querySelector(".mp-data-table-container").style.display !== "none", "original visible after reset");
 
+  // 8) The Value column is sortable, just like Change.
+  //    Values (col 1): C:5, A:10, D:1, B:20. desc -> B,A,C,D. asc -> D,C,A,B.
+  plus.click();
+  await wait(60);
+  function headerCells() { return view().querySelectorAll("thead th"); }
+  headerCells()[1].click(); // "Value" header (Segment, Value, Value (Past), Change)
+  await wait(20);
+  assert(table.getAttribute("data-mp-vp-sortcol") === "2", "sort column = Value");
+  assert(table.getAttribute("data-mp-vp-sort") === "desc", "Value first click = desc");
+  assert(labels().join(",") === "B,A,C,D", "Value desc: " + labels().join(","));
+  assert(/\u2193/.test(headerCells()[1].textContent), "Value column shows desc arrow");
+
+  headerCells()[1].click();
+  await wait(20);
+  assert(table.getAttribute("data-mp-vp-sort") === "asc", "Value second click = asc");
+  assert(labels().join(",") === "D,C,A,B", "Value asc: " + labels().join(","));
+
+  // 9) The Value (Past) column is sortable too, and switching columns restarts desc.
+  //    Values (col 2): C:5, A:2, D:10, B:19. desc -> B,D,C,A.
+  headerCells()[2].click(); // "Value (Past)" header
+  await wait(20);
+  assert(table.getAttribute("data-mp-vp-sortcol") === "3", "sort column switched to Value (Past)");
+  assert(table.getAttribute("data-mp-vp-sort") === "desc", "switching columns restarts at desc");
+  assert(labels().join(",") === "B,D,C,A", "Value (Past) desc: " + labels().join(","));
+
+  // 10) Copy TSV follows the active Value (Past) sort. (Reuse the button handle;
+  //     its label may still read "Copied" from the earlier click.)
+  copyBtn.click();
+  await wait(20);
+  const tsvLabels2 = clipboard.split("\n").slice(1).map(function (l) { return l.split("\t")[0]; });
+  assert(tsvLabels2.join(",") === "B,D,C,A", "TSV rows follow Value (Past) sort: " + tsvLabels2.join(","));
+
   console.log(failures ? "\n" + failures + " assertion(s) failed" : "\nAll assertions passed");
   process.exit(failures ? 1 : 0);
 })();

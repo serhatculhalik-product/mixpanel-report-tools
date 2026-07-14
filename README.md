@@ -57,11 +57,13 @@ Pressing **`↑`** or **`↓`** shows a complete table with a new
   green), `(-)` = down is good (decreases green). Switching between `(+)` and
   `(-)` just recolors.
 
-**Sort by change:** click the **`Change`** column header. Because all rows are
-already collected, sorting is instant — first click sorts **high → low**, click
-again for **low → high**. `Copy TSV` then copies the full table (with the
-`Change` column) in the **current sort order**. `↺` Reset restores Mixpanel's
-original table.
+**Sort by any numeric column:** click the **`Change`**, **`Value`**, or
+**`Value (Past)`** column header. Because all rows are already collected, sorting
+is instant — first click sorts **high → low**, click the same header again for
+**low → high** (clicking a different column restarts at high → low). The active
+column shows a `↑`/`↓` arrow; the others show a neutral `↕`. `Copy TSV` then
+copies the full table (with the `Change` column) in the **current sort order**.
+`↺` Reset restores Mixpanel's original table.
 
 > The result is a fixed snapshot of the table (so the numbers stay put while you
 > sort and copy). Use **`↺` Reset** whenever you want the live Mixpanel table back.
@@ -177,8 +179,9 @@ want the per-row difference.
      table — this is normal.
 2. Switch between **`(+)`** and **`(-)`** any time to flip which direction is
    green — it just recolors, instantly.
-3. Click the **`Change`** column header to **sort**: first click **high → low**,
-   click again **low → high**.
+3. Click the **`Change`**, **`Value`**, or **`Value (Past)`** column header to
+   **sort** by that column: first click **high → low**, click the same header
+   again **low → high** (clicking a different column restarts at high → low).
 4. Click **`Copy TSV`** to copy the complete table (including `Change`) in the
    current sort order.
 5. Click **`↺`** to restore Mixpanel's original table.
